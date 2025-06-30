@@ -50,7 +50,13 @@ export const Dashboard: React.FC = () => {
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {metrics.map((metric, index) => (
-          <MetricCard key={index} {...metric} />
+          <MetricCard 
+            key={index} 
+            title={metric.title}
+            value={metric.value}
+            change={metric.change}
+            icon={<metric.icon className="w-6 h-6" />}
+          />
         ))}
       </div>
 
