@@ -1,0 +1,217 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "created": "2025-06-30T00:00:00.000Z",
+    "updated": "2025-06-30T20:30:00.000Z",
+    "projectName": "Engie - AI Writing Companion",
+    "description": "macOS desktop app for AI-powered writing assistance and motivation"
+  },
+  "tags": {
+    "master": {
+      "name": "master",
+      "description": "Main development branch",
+      "created": "2025-06-30T00:00:00.000Z",
+      "tasks": [
+        {
+          "id": "1",
+          "title": "Core Application Architecture Setup",
+          "description": "Set up the foundational Electron application structure with React/TypeScript, including main process, renderer process, and IPC communication for Engie AI assistant",
+          "status": "pending",
+          "priority": "high",
+          "details": "Create the basic Electron app structure with proper TypeScript configuration, React setup, and inter-process communication channels. This includes configuring the main process for native macOS integration and the renderer process for the user interface.",
+          "testStrategy": "Verify that the application launches successfully, main and renderer processes communicate properly, and basic React components render correctly.",
+          "dependencies": [],
+          "subtasks": []
+        },
+        {
+          "id": "2", 
+          "title": "Real-time Text Analysis Engine",
+          "description": "Implement comprehensive text analysis system with grammar checking, spell checking, tone analysis, and clarity scoring",
+          "status": "pending",
+          "priority": "high",
+          "details": "Build a robust text processing engine that can analyze text in real-time for grammar errors, spelling mistakes, tone detection, and readability metrics. The engine should be modular and support multiple analysis modes.",
+          "testStrategy": "Test with various text samples, verify accuracy of grammar and spell checking, ensure real-time performance under 200ms response time.",
+          "dependencies": ["1"],
+          "subtasks": []
+        },
+        {
+          "id": "3",
+          "title": "Conversational AI Chat Interface",
+          "description": "Create an intuitive chat interface for AI conversations focused on writing support, motivation, and philosophical guidance",
+          "status": "pending", 
+          "priority": "high",
+          "details": "Design and implement a chat component that facilitates natural conversations with the AI assistant. Include features for writing coaching, brainstorming, emotional support, and motivational guidance with Engie's encouraging personality.",
+          "testStrategy": "Test conversation flows, verify AI responses are contextually appropriate, ensure UI is responsive and user-friendly.",
+          "dependencies": ["1"],
+          "subtasks": []
+        },
+        {
+          "id": "4",
+          "title": "macOS Native Integration",
+          "description": "Implement native macOS features including menu bar integration, system notifications, keyboard shortcuts, and appearance adaptation",
+          "status": "pending",
+          "priority": "medium", 
+          "details": "Build deep macOS integration with menu bar presence, native notification system, global keyboard shortcuts, dark/light mode adaptation, and proper window management following macOS Human Interface Guidelines.",
+          "testStrategy": "Verify menu bar functionality, test notifications across different system states, ensure keyboard shortcuts work globally, confirm appearance changes with system settings.",
+          "dependencies": ["1"],
+          "subtasks": []
+        },
+        {
+          "id": "5",
+          "title": "AI Model Integration & Management", 
+          "description": "Implement multi-provider AI integration supporting Claude, GPT-4, and other models with intelligent fallback mechanisms",
+          "status": "pending",
+          "priority": "high",
+          "details": "Create a flexible AI service layer that can work with multiple AI providers (Anthropic Claude, OpenAI GPT-4, etc.) with automatic fallback, rate limiting, and cost optimization. Include local processing options for privacy.",
+          "testStrategy": "Test API integrations with different providers, verify fallback mechanisms work correctly, ensure error handling and retry logic functions properly.",
+          "dependencies": ["2", "3"],
+          "subtasks": []
+        },
+        {
+          "id": "6",
+          "title": "Writing Progress & Analytics Dashboard",
+          "description": "Build analytics system to track writing improvements, usage patterns, and goal achievement with privacy-compliant metrics",
+          "status": "pending",
+          "priority": "medium",
+          "details": "Create a dashboard that shows writing statistics, improvement trends, goal tracking, and usage analytics while maintaining user privacy. Include visualizations for progress over time and achievement milestones.",
+          "testStrategy": "Verify accuracy of metrics tracking, test data visualization components, ensure privacy compliance and no sensitive data leakage.",
+          "dependencies": ["2"],
+          "subtasks": []
+        },
+        {
+          "id": "7", 
+          "title": "Privacy & Security Framework",
+          "description": "Implement comprehensive privacy controls including local-only processing mode, data encryption, and privacy-first architecture",
+          "status": "pending",
+          "priority": "high",
+          "details": "Build privacy-centric features including optional local-only text processing, encrypted data transmission, no keystroke logging without consent, and GDPR compliance mechanisms.",
+          "testStrategy": "Conduct security audits, verify encryption implementation, test local-only mode functionality, ensure compliance with privacy regulations.",
+          "dependencies": ["1", "5"],
+          "subtasks": []
+        },
+        {
+          "id": "8",
+          "title": "Settings & Customization System",
+          "description": "Create comprehensive settings panel for user preferences, AI behavior customization, and privacy controls",
+          "status": "pending", 
+          "priority": "medium",
+          "details": "Design and implement a settings interface that allows users to customize Engie's behavior, choose AI models, set privacy preferences, configure notifications, and personalize the writing assistance experience.",
+          "testStrategy": "Test all setting configurations, verify preferences persist correctly, ensure UI is intuitive and accessible.",
+          "dependencies": ["1", "7"],
+          "subtasks": []
+        },
+        {
+          "id": "9",
+          "title": "System-wide Text Monitoring (Optional)",
+          "description": "Implement optional background text monitoring across macOS applications with strict privacy controls",
+          "status": "pending",
+          "priority": "low",
+          "details": "Create an optional feature that can monitor text input across system applications to provide contextual writing assistance. Must include granular permissions, easy disable options, and transparent operation.",
+          "testStrategy": "Test across various applications, verify permission controls work correctly, ensure performance impact is minimal, confirm easy opt-out functionality.",
+          "dependencies": ["4", "7"],
+          "subtasks": []
+        },
+        {
+          "id": "10",
+          "title": "Performance Optimization & Testing",
+          "description": "Optimize application performance, memory usage, and battery efficiency with comprehensive testing suite",
+          "status": "pending",
+          "priority": "medium",
+          "details": "Implement performance optimizations for real-time text processing, minimize memory footprint, optimize for battery life, and create comprehensive test coverage including unit tests, integration tests, and performance benchmarks.",
+          "testStrategy": "Benchmark performance metrics, verify memory usage stays under 100MB, test battery impact, achieve 95%+ test coverage.",
+          "dependencies": ["2", "5"],
+          "subtasks": []
+        },
+        {
+          "id": "11",
+          "title": "CRITICAL: LangGraph Workflow Integration",
+          "description": "Integrate LangGraph for intelligent workflow automation - MANDATORY for Gauntlet technical evaluation",
+          "status": "pending",
+          "priority": "high",
+          "details": "Implement LangGraph workflow chains: text analysis → task creation → background processing. Add multi-step reasoning for task decomposition and intelligent workflow automation. Create workflow engine in main process with real-time status updates.",
+          "testStrategy": "Test workflow chain execution, verify multi-step reasoning works, ensure background processing completes successfully, validate real-time status updates.",
+          "dependencies": ["1", "2"],
+          "subtasks": []
+        },
+        {
+          "id": "12",
+          "title": "Background Processing Engine",
+          "description": "Implement local workflow execution system with background worker threads",
+          "status": "pending",
+          "priority": "high",
+          "details": "Create background worker threads in main process, workflow queue and state management, real-time status updates to renderer. Implement job scheduling and monitoring for local workflow execution.",
+          "testStrategy": "Test background thread creation, verify workflow queue processes correctly, ensure state management persists across app restarts, validate real-time updates.",
+          "dependencies": ["1"],
+          "subtasks": []
+        },
+        {
+          "id": "13",
+          "title": "TaskMaster UI Integration",
+          "description": "Surface TaskMaster functionality directly in Engie UI for seamless task management",
+          "status": "pending",
+          "priority": "high",
+          "details": "Build task sidebar panel component, live TaskMaster MCP integration, quick task creation from text selection. Integrate existing TaskMaster functionality into the main Engie interface.",
+          "testStrategy": "Test task panel UI, verify MCP integration works correctly, ensure task creation from text selection functions, validate live updates from TaskMaster.",
+          "dependencies": ["1", "3"],
+          "subtasks": []
+        },
+        {
+          "id": "14",
+          "title": "Enhanced Chat Interface with Workflow Integration",
+          "description": "Upgrade chat interface with professional experience and workflow integration capabilities",
+          "status": "pending",
+          "priority": "medium",
+          "details": "Add smart typing indicators, message categorization (insight/encouragement/task), task creation from chat messages. Integrate with workflow engine for intelligent task suggestions.",
+          "testStrategy": "Test message categorization accuracy, verify task creation from chat works, ensure typing indicators function properly, validate workflow integration.",
+          "dependencies": ["3", "11"],
+          "subtasks": []
+        },
+        {
+          "id": "15",
+          "title": "LangGraph-Powered Text Analysis",
+          "description": "Implement intelligent real-time text analysis using LangGraph workflows",
+          "status": "pending",
+          "priority": "medium",
+          "details": "Background text processing with LangGraph, writing pattern recognition, auto-task generation suggestions. Integrate with existing text analyzer to provide intelligent insights.",
+          "testStrategy": "Test real-time analysis performance, verify pattern recognition accuracy, ensure auto-task suggestions are relevant, validate background processing efficiency.",
+          "dependencies": ["2", "11"],
+          "subtasks": []
+        },
+        {
+          "id": "16",
+          "title": "MVP UI/UX Polish",
+          "description": "Professional visual improvements for tester-ready MVP presentation",
+          "status": "pending",
+          "priority": "medium",
+          "details": "Add loading states and animations, error handling and fallbacks, performance optimizations, responsive design improvements. Ensure professional appearance for beta testing.",
+          "testStrategy": "Test all loading states, verify error handling works correctly, ensure responsive design across window sizes, validate animation performance.",
+          "dependencies": ["13", "14"],
+          "subtasks": []
+        },
+        {
+          "id": "17",
+          "title": "Integration Testing & Bug Fixes",
+          "description": "End-to-end testing and bug fixes for stable MVP operation",
+          "status": "pending",
+          "priority": "medium",
+          "details": "End-to-end workflow testing, performance verification, cross-feature integration testing. Ensure stable operation for testers with comprehensive bug fixes.",
+          "testStrategy": "Complete end-to-end test suite, verify all features work together, ensure no critical bugs remain, validate performance meets requirements.",
+          "dependencies": ["11", "12", "13"],
+          "subtasks": []
+        },
+        {
+          "id": "18",
+          "title": "Tester Documentation",
+          "description": "Create comprehensive documentation for MVP beta testers",
+          "status": "pending",
+          "priority": "low",
+          "details": "Quick setup guide, feature demonstration script, known limitations documentation. Ensure testers can effectively evaluate all MVP features.",
+          "testStrategy": "Test documentation accuracy, verify setup guide works for new users, ensure demonstration script covers all features.",
+          "dependencies": ["16", "17"],
+          "subtasks": []
+        }
+      ]
+    }
+  },
+  "currentTag": "master"
+}

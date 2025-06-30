@@ -1,0 +1,19 @@
+{
+  "allowedTools": [
+    "Edit",
+    "Read", 
+    "Write",
+    "MultiEdit",
+    "Bash(npm run *)",
+    "Bash(task-master *)",
+    "Bash(git *)",
+    "Bash(electron *)",
+    "Bash(code *)",
+    "mcp__task_master_ai__*",
+    "Glob",
+    "Grep",
+    "LS"
+  ],
+  "customInstructions": "This is a Gauntlet AI project. Focus on rapid development, professional quality, and impressive features. Always use Task Master for project management.",
+  "workingDirectory": "/Users/jfuginay/Documents/gauntlet-projects/gauntlet-macos-template"
+}

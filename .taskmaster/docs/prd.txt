@@ -1,0 +1,183 @@
+# Engie - AI-Powered Writing & Motivation Companion for macOS
+
+## Product Overview
+
+Engie is a sophisticated macOS desktop application that serves as an intelligent writing companion and motivational coach. Building on the philosophical foundation from previous iterations, Engie combines real-time text analysis, grammar correction, tone suggestions, and personalized encouragement to help users communicate effectively while maintaining motivation through challenging tasks.
+
+## Vision Statement
+
+"Empowering users to express themselves clearly and confidently while providing the encouragement needed to persevere through difficult challenges, because difficult isn't bad - it just means the outcome is worth it."
+
+## Core Features
+
+### 1. Intelligent Text Analysis & Correction
+- **Real-time Grammar & Spell Check**: Advanced grammar correction that goes beyond basic spell check
+- **Tone Analysis**: AI-powered tone detection and suggestions (professional, casual, empathetic, assertive, etc.)
+- **Style Recommendations**: Context-aware writing style improvements
+- **Clarity Enhancement**: Suggestions to make complex ideas more accessible
+- **Readability Scoring**: Real-time readability metrics and improvement suggestions
+
+### 2. Philosophical Guidance & Motivation
+- **Encouraging Insights**: Contextual motivational messages based on user's current task
+- **Difficulty Reframing**: Help users understand that challenges indicate worthwhile outcomes
+- **Progress Celebration**: Recognition of writing improvements and milestones
+- **Wisdom Quotes**: Curated philosophical insights relevant to current struggles
+- **Growth Mindset Reinforcement**: Consistent messaging about learning and improvement
+
+### 3. Chat Companion Interface
+- **Conversational AI**: Natural dialogue about writing challenges, goals, and concerns
+- **Writing Coaching**: Interactive guidance through difficult writing tasks
+- **Brainstorming Partner**: Help generate ideas and overcome writer's block
+- **Emotional Support**: Understanding responses to frustration and writing anxiety
+- **Goal Setting**: Assistance with establishing and tracking writing objectives
+
+### 4. macOS Native Integration
+- **System-wide Text Monitoring**: Optional background monitoring of text input across applications
+- **Menu Bar Integration**: Quick access to Engie without disrupting workflow
+- **Notification System**: Gentle suggestions and encouragement via native notifications
+- **Dark/Light Mode**: Seamless adaptation to system appearance
+- **Keyboard Shortcuts**: Quick access to key features
+- **Privacy-First**: All processing respects user privacy with optional local-only mode
+
+## Technical Architecture
+
+### Frontend (Renderer Process)
+- **React + TypeScript**: Modern component architecture
+- **Tailwind CSS**: Consistent, responsive design system
+- **Real-time Text Editor**: Advanced text input with live analysis
+- **Chat Interface**: Conversational UI for AI interactions
+- **Settings Panel**: Comprehensive customization options
+- **Analytics Dashboard**: Writing progress and improvement metrics
+
+### Backend (Main Process)
+- **Electron Main**: Native macOS integration and window management
+- **AI Integration**: Multiple AI model support (Claude, GPT, local models)
+- **Text Processing Engine**: Real-time grammar, style, and tone analysis
+- **Privacy Engine**: Configurable data handling and local processing options
+- **Notification Manager**: Smart, non-intrusive encouragement system
+- **Usage Analytics**: Track improvement patterns (privacy-compliant)
+
+### AI Capabilities
+- **Multi-Model Support**: Claude, GPT-4, and local models for different features
+- **Context Awareness**: Understanding of current task and user goals
+- **Personalization**: Learning user preferences and communication style
+- **Emotional Intelligence**: Recognizing frustration, excitement, and motivation levels
+- **Domain Knowledge**: Understanding of various writing contexts (business, creative, academic)
+
+## User Experience Flow
+
+### Initial Setup
+1. **Welcome & Philosophy**: Introduction to Engie's encouraging approach
+2. **Privacy Preferences**: Choose between cloud AI and local processing
+3. **Writing Goals**: Establish personal objectives and challenges
+4. **Tone Preferences**: Calibrate feedback style (gentle, direct, enthusiastic)
+5. **Integration Setup**: Configure system-wide monitoring preferences
+
+### Daily Workflow
+1. **Writing Detection**: Engie notices when user begins writing
+2. **Real-time Analysis**: Grammar, tone, and clarity suggestions appear subtly
+3. **Contextual Encouragement**: Motivational insights based on current task difficulty
+4. **Interactive Support**: Chat available for complex writing challenges
+5. **Progress Recognition**: Celebration of improvements and milestones
+
+### Advanced Features
+1. **Writing Sessions**: Focused writing mode with goal tracking
+2. **Difficulty Coaching**: Special support when tasks become challenging
+3. **Style Evolution**: Track writing improvement over time
+4. **Custom Workflows**: Personalized writing processes for different contexts
+5. **Collaboration Mode**: Help with communication in team environments
+
+## Success Metrics
+
+### Technical Excellence
+- **Performance**: Sub-200ms text analysis response time
+- **Accuracy**: 95%+ grammar correction accuracy
+- **Reliability**: 99.9% uptime for local processing
+- **Privacy**: Zero data leaks, configurable local-only mode
+- **Integration**: Seamless operation across all macOS text applications
+
+### User Experience
+- **Engagement**: Daily active usage by 80% of users
+- **Satisfaction**: 4.8+ star rating with focus on encouragement quality
+- **Improvement**: Measurable writing quality improvements for users
+- **Retention**: 90% monthly retention rate
+- **Motivation**: User reports of increased confidence and persistence
+
+### Business Impact
+- **Market Position**: Leading AI writing companion for macOS
+- **User Base**: 10,000+ active users within first year
+- **Revenue Model**: Freemium with premium AI features
+- **Platform Expansion**: Foundation for iOS and web versions
+
+## Differentiation
+
+### Unique Value Propositions
+1. **Philosophical Foundation**: Unlike pure grammar tools, Engie focuses on motivation and growth mindset
+2. **Difficulty Reframing**: Unique approach to helping users embrace challenges
+3. **Native macOS Integration**: Deep system integration for seamless experience
+4. **Privacy-First**: Optional local processing for sensitive content
+5. **Holistic Support**: Combines technical writing help with emotional encouragement
+
+### Competitive Advantages
+- **AI-Powered Motivation**: Goes beyond grammar to address writer psychology
+- **Contextual Intelligence**: Understands when users need encouragement vs. technical help
+- **Personalized Growth**: Adapts to individual writing style and goals
+- **macOS Optimization**: Built specifically for Mac users' workflows
+- **Philosophical Depth**: Meaningful insights beyond surface-level corrections
+
+## Development Phases
+
+### Phase 1: Core Writing Assistant (MVP)
+- Basic grammar and spell checking
+- Simple tone analysis
+- Chat interface with encouraging responses
+- macOS menu bar integration
+
+### Phase 2: Advanced AI Features
+- Multi-model AI integration
+- Contextual motivation system
+- Real-time writing coaching
+- Progress tracking and analytics
+
+### Phase 3: System Integration
+- System-wide text monitoring
+- Advanced privacy controls
+- Custom workflow support
+- Collaboration features
+
+### Phase 4: Ecosystem Expansion
+- iOS companion app
+- Web dashboard
+- Team/enterprise features
+- API for third-party integration
+
+## Technical Requirements
+
+### Performance
+- Native macOS performance with Electron optimization
+- Real-time text processing without lag
+- Minimal memory footprint (< 100MB)
+- Battery-efficient background operation
+
+### Privacy & Security
+- Configurable local-only processing mode
+- Encrypted data transmission for cloud features
+- No keystroke logging without explicit consent
+- GDPR and privacy regulation compliance
+
+### Compatibility
+- macOS 12.0+ support
+- Apple Silicon and Intel optimization
+- Integration with popular writing applications
+- Accessibility compliance (VoiceOver, keyboard navigation)
+
+## Success Criteria
+
+Engie will be considered successful when users consistently report:
+1. **Improved Writing Quality**: Measurable improvements in clarity and correctness
+2. **Increased Confidence**: Reduced writing anxiety and increased willingness to tackle difficult tasks
+3. **Enhanced Motivation**: Better persistence through challenging writing projects
+4. **Workflow Integration**: Seamless integration into daily writing activities
+5. **Personal Growth**: Long-term improvement in communication skills and self-confidence
+
+The ultimate goal is creating a tool that not only improves writing but helps users develop resilience and confidence in facing difficult challenges, embodying the philosophy that "difficult isn't bad - it just means the outcome is worth it."
