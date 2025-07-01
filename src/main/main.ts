@@ -1,6 +1,10 @@
-import { app, BrowserWindow, Menu, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, Menu, shell, ipcMain, desktopCapturer } from 'electron';
 import { join } from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { createMenu } from './menu';
+
+const execAsync = promisify(exec);
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -114,6 +118,129 @@ class EngieApp {
     // Handle opening external links
     ipcMain.handle('open-external', (_, url: string) => {
       shell.openExternal(url);
+    });
+
+    // Context monitoring handlers
+    ipcMain.handle('request-screen-capture-permission', async () => {
+      try {
+        if (process.platform === 'darwin') {
+          // Note: Screen capture permission is handled differently than camera/microphone
+          // For now, we'll assume permission is granted and handle it in the capture function
+          return true;
+        }
+        return true; // Assume granted on other platforms
+      } catch (error) {
+        console.error('Failed to request screen capture permission:', error);
+        return false;
+      }
+    });
+
+    ipcMain.handle('capture-screen', async () => {
+      try {
+        const sources = await desktopCapturer.getSources({
+          types: ['screen'],
+          thumbnailSize: { width: 1920, height: 1080 }
+        });
+
+        if (sources.length > 0) {
+          // Return the first screen's thumbnail as base64
+          return sources[0].thumbnail.toDataURL();
+        }
+        return null;
+      } catch (error) {
+        console.error('Failed to capture screen:', error);
+        return null;
+      }
+    });
+
+    ipcMain.handle('get-active-window-info', async () => {
+      try {
+        if (process.platform === 'darwin') {
+          // Use AppleScript to get active window info
+          const { stdout } = await execAsync(`osascript -e '
+            tell application "System Events"
+              set frontApp to first application process whose frontmost is true
+              set appName to name of frontApp
+              try
+                set windowTitle to name of first window of frontApp
+              on error
+                set windowTitle to ""
+              end try
+              return appName & "|" & windowTitle
+            end tell'`);
+          
+          const [appName, windowTitle] = stdout.trim().split('|');
+          return {
+            activeApp: appName || 'Unknown',
+            windowTitle: windowTitle || '',
+            platform: 'darwin'
+          };
+        } else {
+          // For other platforms, return basic info
+          return {
+            activeApp: 'Unknown',
+            windowTitle: '',
+            platform: process.platform
+          };
+        }
+      } catch (error) {
+        console.error('Failed to get active window info:', error);
+        return {
+          activeApp: 'Unknown',
+          windowTitle: '',
+          platform: process.platform,
+          error: String(error)
+        };
+      }
+    });
+
+    ipcMain.handle('execute-taskmaster-command', async (_, command: string) => {
+      try {
+        const { stdout, stderr } = await execAsync(`task-master ${command}`, {
+          cwd: this.mainWindow?.webContents.getURL().includes('localhost') 
+            ? process.cwd() 
+            : process.resourcesPath
+        });
+        
+        if (stderr) {
+          console.warn('TaskMaster stderr:', stderr);
+        }
+        
+        return { success: true, output: stdout };
+      } catch (error) {
+        console.error('TaskMaster command failed:', error);
+        return { 
+          success: false, 
+          error: String(error),
+          output: '' 
+        };
+      }
+    });
+
+    ipcMain.handle('get-github-activity', async () => {
+      try {
+        // Check git status for current project
+        const { stdout: gitStatus } = await execAsync('git status --porcelain');
+        const { stdout: gitLog } = await execAsync('git log --oneline -5');
+        
+        return {
+          hasUncommittedChanges: gitStatus.trim().length > 0,
+          recentCommits: gitLog.trim().split('\n').filter(line => line.length > 0),
+          modifiedFiles: gitStatus.trim().split('\n').filter(line => line.length > 0)
+        };
+      } catch (error) {
+        console.error('Failed to get git activity:', error);
+        return null;
+      }
+    });
+
+    ipcMain.handle('monitor-file-changes', async (_, directory: string) => {
+      // This would implement file system watching
+      // For now, return mock data
+      return {
+        watchingDirectory: directory,
+        recentChanges: []
+      };
     });
   }
 }

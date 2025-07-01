@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { ChatInterface } from './components/ChatInterface';
 import { TextAnalyzer } from './components/TextAnalyzer';
+import { TaskMasterDashboard } from './components/TaskMasterDashboard';
+import { ContextMonitor } from './components/ContextMonitor';
+import { AIInsights } from './components/AIInsights';
 import { SettingsModal } from './components/SettingsModal';
 import { useSystemTheme } from './hooks/useSystemTheme';
 import { Settings } from 'lucide-react';
@@ -9,7 +12,7 @@ import './App.css';
 interface AppProps {}
 
 export const App: React.FC<AppProps> = () => {
-  const [currentView, setCurrentView] = useState<'chat' | 'analyzer'>('chat');
+  const [currentView, setCurrentView] = useState<'chat' | 'analyzer' | 'tasks' | 'context' | 'insights'>('insights');
   const [isLoading, setIsLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const theme = useSystemTheme();
@@ -56,6 +59,26 @@ export const App: React.FC<AppProps> = () => {
           
           <nav className="flex-1 p-4">
             <button
+              onClick={() => setCurrentView('insights')}
+              className={`w-full text-left px-4 py-3 rounded-lg mb-2 transition-colors ${
+                currentView === 'insights'
+                  ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              🧠 AI Insights
+            </button>
+            <button
+              onClick={() => setCurrentView('tasks')}
+              className={`w-full text-left px-4 py-3 rounded-lg mb-2 transition-colors ${
+                currentView === 'tasks'
+                  ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              🎯 TaskMaster
+            </button>
+            <button
               onClick={() => setCurrentView('chat')}
               className={`w-full text-left px-4 py-3 rounded-lg mb-2 transition-colors ${
                 currentView === 'chat'
@@ -67,13 +90,23 @@ export const App: React.FC<AppProps> = () => {
             </button>
             <button
               onClick={() => setCurrentView('analyzer')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+              className={`w-full text-left px-4 py-3 rounded-lg mb-2 transition-colors ${
                 currentView === 'analyzer'
                   ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
                   : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
               }`}
             >
               ✨ Text Analyzer
+            </button>
+            <button
+              onClick={() => setCurrentView('context')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                currentView === 'context'
+                  ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+                  : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              👁️ Context Monitor
             </button>
           </nav>
           
@@ -92,9 +125,12 @@ export const App: React.FC<AppProps> = () => {
         </div>
         
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {currentView === 'insights' && <AIInsights />}
+          {currentView === 'tasks' && <TaskMasterDashboard />}
           {currentView === 'chat' && <ChatInterface />}
           {currentView === 'analyzer' && <TextAnalyzer />}
+          {currentView === 'context' && <ContextMonitor />}
         </div>
       </div>
       

@@ -69,7 +69,7 @@ Classify your response type as:
       
       const response = await this.anthropic.messages.create({
         model: 'claude-3-haiku-20240307',
-        max_tokens: 300,
+        max_tokens: 800, // Increased for more detailed analysis
         system: systemPrompt,
         messages: [{
           role: 'user',
@@ -199,6 +199,119 @@ Be supportive and constructive. Focus on what's good while offering helpful impr
         : ['Consider expanding with more specific examples', 'Good concise writing'],
       tone: text.includes('therefore') || text.includes('however') ? 'formal' : 'conversational',
       improvements: ['Clear communication style', 'Good engagement with the topic']
+    };
+  }
+
+  async analyzeActivity(activitySummary: string): Promise<{
+    summary: string;
+    insights: string[];
+    recommendations: string[];
+    confidence: number;
+  }> {
+    if (!this.anthropic || !this.apiKey) {
+      return this.generateFallbackActivityAnalysis();
+    }
+
+    try {
+      const systemPrompt = `You are Engie, an AI assistant observing a user's computer activity. You're thoughtful, encouraging, and philosophical with the motto: "Difficult isn't bad - it just means the outcome is worth it."
+
+Analyze the activity summary and provide:
+1. A warm, observational summary (2-3 sentences)
+2. 2-3 insights about their work patterns or focus
+3. 1-2 gentle recommendations or encouragements
+
+Be supportive and insightful. Focus on what they're accomplishing, not just what they're doing.`;
+
+      const response = await this.anthropic.messages.create({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 600,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: `Please analyze this activity: ${activitySummary}`
+        }]
+      });
+
+      const content = response.content[0].type === 'text' ? response.content[0].text : '';
+      
+      // Parse the response
+      return this.parseActivityAnalysis(content);
+    } catch (error) {
+      console.error('Activity analysis error:', error);
+      return this.generateFallbackActivityAnalysis();
+    }
+  }
+
+  private parseActivityAnalysis(content: string): {
+    summary: string;
+    insights: string[];
+    recommendations: string[];
+    confidence: number;
+  } {
+    const lines = content.split('\n').filter(line => line.trim());
+    
+    // Extract summary (first paragraph)
+    const summary = lines.slice(0, 2).join(' ').trim() || 'You\'ve been productive in your work.';
+    
+    // Extract insights and recommendations
+    const insights: string[] = [];
+    const recommendations: string[] = [];
+    
+    lines.forEach(line => {
+      const lower = line.toLowerCase();
+      if (lower.includes('insight') || lower.includes('notice') || lower.includes('pattern') || 
+          lower.includes('focus') || lower.includes('concentration')) {
+        insights.push(line.trim());
+      }
+      if (lower.includes('recommend') || lower.includes('suggest') || lower.includes('consider') || 
+          lower.includes('try') || lower.includes('keep')) {
+        recommendations.push(line.trim());
+      }
+    });
+
+    // Fallback extraction if no specific patterns found
+    if (insights.length === 0 && recommendations.length === 0) {
+      const midpoint = Math.floor(lines.length / 2);
+      insights.push(...lines.slice(1, midpoint).map(l => l.trim()));
+      recommendations.push(...lines.slice(midpoint).map(l => l.trim()));
+    }
+
+    return {
+      summary,
+      insights: insights.slice(0, 3).filter(Boolean),
+      recommendations: recommendations.slice(0, 2).filter(Boolean),
+      confidence: 0.8
+    };
+  }
+
+  private generateFallbackActivityAnalysis(): {
+    summary: string;
+    insights: string[];
+    recommendations: string[];
+    confidence: number;
+  } {
+    const encouragingMessages = [
+      "I can see you're making steady progress on your work.",
+      "Your focused efforts are building toward something meaningful.",
+      "Every moment of engagement with your tasks shows dedication."
+    ];
+
+    const insights = [
+      "You're maintaining consistent activity throughout your work session",
+      "Your approach shows thoughtful engagement with your projects",
+      "You're building momentum with each focused effort"
+    ];
+
+    const recommendations = [
+      "Keep trusting the process - difficult work leads to worthwhile outcomes",
+      "Remember to take breaks when you need them; rest supports sustained progress"
+    ];
+
+    return {
+      summary: encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)],
+      insights: insights.slice(0, 2),
+      recommendations: recommendations.slice(0, 1),
+      confidence: 0.5
     };
   }
 

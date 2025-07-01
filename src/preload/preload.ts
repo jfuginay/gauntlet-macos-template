@@ -18,6 +18,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // App notifications
   showNotification: (title: string, body: string) => 
     ipcRenderer.invoke('show-notification', title, body),
+
+  // Context monitoring APIs
+  requestScreenCapturePermission: () => ipcRenderer.invoke('request-screen-capture-permission'),
+  captureScreen: () => ipcRenderer.invoke('capture-screen'),
+  getActiveWindowInfo: () => ipcRenderer.invoke('get-active-window-info'),
+  
+  // TaskMaster integration
+  executeTaskMasterCommand: (command: string) => ipcRenderer.invoke('execute-taskmaster-command', command),
+  
+  // Development activity monitoring
+  getGitHubActivity: () => ipcRenderer.invoke('get-github-activity'),
+  monitorFileChanges: (directory: string) => ipcRenderer.invoke('monitor-file-changes', directory),
 });
 
 // Type definitions for the exposed API
@@ -28,6 +40,34 @@ export interface ElectronAPI {
   onThemeChange: (callback: (theme: 'dark' | 'light') => void) => void;
   getPerformanceMetrics: () => Promise<any>;
   showNotification: (title: string, body: string) => Promise<void>;
+  
+  // Context monitoring
+  requestScreenCapturePermission: () => Promise<boolean>;
+  captureScreen: () => Promise<string | null>;
+  getActiveWindowInfo: () => Promise<{
+    activeApp: string;
+    windowTitle: string;
+    platform: string;
+    error?: string;
+  }>;
+  
+  // TaskMaster integration
+  executeTaskMasterCommand: (command: string) => Promise<{
+    success: boolean;
+    output: string;
+    error?: string;
+  }>;
+  
+  // Development monitoring
+  getGitHubActivity: () => Promise<{
+    hasUncommittedChanges: boolean;
+    recentCommits: string[];
+    modifiedFiles: string[];
+  } | null>;
+  monitorFileChanges: (directory: string) => Promise<{
+    watchingDirectory: string;
+    recentChanges: any[];
+  }>;
 }
 
 declare global {
