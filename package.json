@@ -64,6 +64,7 @@
     "axios": "^1.10.0",
     "clsx": "^2.0.0",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.0.1",
     "electron-squirrel-startup": "^1.0.1",
     "keytar": "^7.9.0",
     "lucide-react": "^0.300.0",
