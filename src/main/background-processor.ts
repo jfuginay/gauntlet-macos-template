@@ -190,12 +190,8 @@ export class BackgroundProcessor {
           break;
 
         case 'task_generation':
-          // Simulate task generation
-          await this.simulateDelay(500, 2000);
-          result = {
-            tasks: this.generateMockTasks(job.data),
-            timestamp: Date.now()
-          };
+          // Task generation handled by workflow engine
+          result = await this.workflowEngine.processUserInput(job.data.message || job.data.input);
           break;
 
         case 'ai_processing':
@@ -258,24 +254,7 @@ export class BackgroundProcessor {
     return new Promise(resolve => setTimeout(resolve, delay));
   }
 
-  private generateMockTasks(data: any): any[] {
-    return [
-      {
-        id: `task_${Date.now()}_1`,
-        title: `Process ${data.type || 'input'}`,
-        description: `Auto-generated task from background processing`,
-        priority: 'medium',
-        status: 'pending'
-      },
-      {
-        id: `task_${Date.now()}_2`,
-        title: `Review generated content`,
-        description: `Verify the output from background processing`,
-        priority: 'low',
-        status: 'pending'
-      }
-    ];
-  }
+
 
   // Cleanup method
   cleanup(): void {

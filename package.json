@@ -1,7 +1,7 @@
 {
   "name": "engie-macos-app",
   "version": "1.0.0",
-  "description": "Engie - AI Writing Companion & Motivational Coach",
+  "description": "ENGIE - Enhanced Neural Gateway for Intelligent Execution - AI-Powered Second Brain with TaskMaster MCP Integration",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
@@ -76,7 +76,7 @@
   },
   "build": {
     "appId": "com.engie.macos-app",
-    "productName": "Engie - AI Writing Companion",
+    "productName": "ENGIE - Enhanced Neural Gateway",
     "directories": {
       "output": "release"
     },

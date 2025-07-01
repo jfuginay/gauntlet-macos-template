@@ -1,7 +1,9 @@
-# 🚀 ENGIE - AI-Enhanced Development Environment
-## Professional macOS Desktop Application with Claude CLI Integration
+# 🧠 ENGIE - Enhanced Neural Gateway for Intelligent Execution
+## AI-Powered Second Brain with TaskMaster MCP Integration
 
-**ENGIE** is a production-ready macOS desktop application that combines an AI-powered chat interface with an integrated terminal and intelligent project management. Built with modern web technologies and native macOS integration, ENGIE provides developers with a seamless AI-enhanced workflow.
+**Let go and let Claude.**
+
+**ENGIE** is a production-ready macOS desktop application that serves as your AI-powered second brain, combining intelligent task management, MCP server integration, and Claude CLI automation. Built with modern web technologies and native macOS integration, ENGIE transforms how developers manage complex projects through intelligent execution and seamless AI workflows.
 
 ![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white)
 ![Electron](https://img.shields.io/badge/Electron-191970?style=for-the-badge&logo=Electron&logoColor=white)
@@ -9,7 +11,19 @@
 ![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-## 🎯 Key Features & Technical Achievements
+## 🧠 Core Capabilities & Technical Excellence
+
+### 🎯 **AI-Powered Second Brain**
+- **Intelligent Task Management**: Advanced MCP TaskMaster integration for project orchestration
+- **Claude-Powered Decision Making**: AI-driven project insights and recommendations  
+- **Context-Aware Planning**: Understands project relationships and dependencies
+- **Automated Task Breakdown**: Smart decomposition of complex goals into actionable steps
+
+### 🔗 **MCP Server Integration**
+- **TaskMaster Protocol**: Native Model Context Protocol for task intelligence
+- **Real-Time Synchronization**: Live task updates and dependency tracking
+- **Multi-Project Management**: Handle multiple projects with isolated contexts
+- **Research Integration**: AI-powered research tools for informed decision making
 
 ### 🔐 **Enterprise-Grade Security**
 - **macOS Keychain Integration**: API keys stored with system-level encryption
@@ -17,15 +31,15 @@
 - **Secure IPC Communication**: Safe inter-process communication between main and renderer
 - **Zero Trust Architecture**: API keys never stored in plain text
 
-### 🖥️ **Professional Terminal Integration**
+### 🖥️ **Professional Development Environment**
 - **Claude CLI Auto-Installation**: Automatically installs and updates Claude CLI
-- **MCP Task Master Integration**: Built-in project intelligence via Model Context Protocol
-- **iTerm-Style Interface**: Professional terminal experience with retro aesthetics
+- **iTerm-Style Terminal**: Professional terminal experience with retro aesthetics
 - **Command History & Navigation**: Full terminal functionality with keyboard shortcuts
+- **Seamless AI Integration**: Chat directly with Claude within your development environment
 
-### 🎨 **Polished User Interface**
-- **Retro-Futuristic Design**: Sleek neon-accented interface with smooth animations
-- **Multi-Tab Architecture**: Chat, Terminal, and Task Management in separate tabs
+### 🎨 **Retro-Futuristic Interface**
+- **Neural Gateway Aesthetics**: Sleek neon-accented interface with smooth animations
+- **Multi-Tab Architecture**: Chat, Terminal, and Task Management in unified workspace
 - **Responsive Layout**: Optimized for various screen sizes and use cases
 - **Vim-Style Navigation**: Keyboard shortcuts for power users
 

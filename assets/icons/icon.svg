@@ -52,10 +52,15 @@
   </text>
   
   <!-- Subtitle -->
-  <text x="256" y="240" font-family="monospace" font-size="18" 
-        text-anchor="middle" fill="#64748b">
-    Expert Navigator for Goal Implementation
-  </text>
+      <text x="256" y="235" font-family="monospace" font-size="16" 
+          text-anchor="middle" fill="#64748b">
+     Enhanced Neural Gateway for Intelligent Execution
+    </text>
+    
+    <text x="256" y="255" font-family="monospace" font-size="14" 
+          text-anchor="middle" fill="#00ffff" opacity="0.8">
+     Let go and let Claude
+    </text>
   
   <!-- Terminal cursor symbol -->
   <rect x="440" y="210" width="12" height="20" fill="url(#accentGradient)" 

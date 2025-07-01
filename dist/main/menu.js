@@ -141,3 +141,4 @@ function createMenu(callbacks) {
     ];
     return electron_1.Menu.buildFromTemplate(template);
 }
+//# sourceMappingURL=menu.js.map

@@ -1,18 +1,21 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './App.css';
+import { ConsoleLog } from './components/ConsoleLog';
+import TabBar, { Tab } from './components/TabBar';
+import TaskViewer from './components/TaskViewer';
+import { FirstRunSetup } from './components/FirstRunSetup';
+import { ApiKeySettings } from './components/ApiKeySettings';
+import { Terminal } from './components/Terminal';
+import { engieOrchestrator } from './services/engieOrchestrator';
+import { taskMasterService, TaskMasterTask, TaskMasterStats } from './services/taskMasterService';
 
 interface Message {
   id: number;
   text: string;
   type: 'user' | 'assistant' | 'system';
   timestamp: Date;
-}
-
-interface Task {
-  id: number;
-  title: string;
-  status: 'pending' | 'in-progress' | 'done' | 'blocked';
-  priority: 'high' | 'medium' | 'low';
+  thought?: string; // Add thought process for AI messages
+  toolsUsed?: string[]; // Add tools used for transparency
 }
 
 interface SystemStatus {
@@ -23,12 +26,73 @@ interface SystemStatus {
   currentModel: string;
 }
 
+type FontSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+type Mode = 'normal' | 'insert';
+
+const TAB_STORAGE_KEY = 'engie-tabs';
+const MAX_TABS = 8;
+
 export const App: React.FC = () => {
+  const [mode, setMode] = useState<Mode>('insert');
+  const [fontSize, setFontSize] = useState<FontSize>('md');
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentInput, setCurrentInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [mode, setMode] = useState<'normal' | 'insert'>('insert');
-  const [systemStatus, setSystemStatus] = useState<SystemStatus>({
+  const [showConsoleLog, setShowConsoleLog] = useState(false);
+  
+  // Tab System State
+  const [tabs, setTabs] = useState<Tab[]>([
+    { id: 'chat', type: 'chat', title: 'Chat', closeable: false }
+  ]);
+  const [activeTabId, setActiveTabId] = useState('chat');
+  
+  // Real TaskMaster state
+  const [realTasks, setRealTasks] = useState<TaskMasterTask[]>([]);
+  const [taskMetrics, setTaskMetrics] = useState<TaskMasterStats>({
+    total: 0,
+    completed: 0,
+    inProgress: 0,
+    pending: 0,
+    blocked: 0,
+    deferred: 0,
+    cancelled: 0,
+    review: 0,
+    completionPercentage: 0
+  });
+  const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+  const [hasTaskMasterSetup, setHasTaskMasterSetup] = useState(false);
+  
+  // First-run setup state
+  const [isFirstRun, setIsFirstRun] = useState(false);
+  const [showFirstRunSetup, setShowFirstRunSetup] = useState(false);
+  const [showApiKeySettings, setShowApiKeySettings] = useState(false);
+  
+  // Intelligence insights state
+  const [intelligenceInsights, setIntelligenceInsights] = useState({
+    totalPatterns: 0,
+    avgEffectiveness: 0,
+    learningRate: 0,
+    recentActivity: { commits: 0, tasks: 0 },
+    recommendations: ['Intelligence system initializing...']
+  });
+  
+  // Text selection and context menu state
+  const [selectedText, setSelectedText] = useState('');
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+  const [isCreatingTaskFromSelection, setIsCreatingTaskFromSelection] = useState(false);
+  
+  // Task edit modal state
+  const [editingTask, setEditingTask] = useState<TaskMasterTask | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    priority: 'medium' as 'high' | 'medium' | 'low',
+    status: 'pending' as TaskMasterTask['status']
+  });
+  
+  const [systemStatus] = useState<SystemStatus>({
     langGraph: true,
     backgroundProcessor: true,
     localLLM: true,
@@ -36,36 +100,30 @@ export const App: React.FC = () => {
     currentModel: 'llama3.2:1b'
   });
   
-  const [tasks] = useState<Task[]>([
-    { id: 1, title: 'Initialize LangGraph workflow engine', status: 'done', priority: 'high' },
-    { id: 2, title: 'Implement background processing system', status: 'done', priority: 'high' },
-    { id: 3, title: 'Set up local LLM integration', status: 'done', priority: 'medium' },
-    { id: 4, title: 'Create terminal-style user interface', status: 'in-progress', priority: 'high' },
-    { id: 5, title: 'Add TaskMaster MCP integration', status: 'pending', priority: 'medium' },
-    { id: 6, title: 'Enhance conversational AI capabilities', status: 'pending', priority: 'high' },
-    { id: 7, title: 'Implement task management dashboard', status: 'in-progress', priority: 'high' },
-  ]);
-  
   const messagesRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // ASCII Art Header
   const asciiHeader = `$ whoami
-engie-ai-companion
+engie-expert-navigator
 
 $ status
-✅ LangGraph Engine: Active
-✅ Background Processor: 3 workers online  
-✅ Local LLM: llama3.2:1b ready
-✅ TaskMaster MCP: Connected
+✅ Goal Navigation Engine: Active
+✅ Desire Processing: 3 workers online  
+✅ Local AI Brain: ${systemStatus.currentModel} ready
+✅ TaskMaster Intelligence: Connected
 
-$ echo "Welcome to Engie!"
-I'm your AI development companion. 
+        $ echo "ENGIE: Enhanced Neural Gateway for Intelligent Execution"
+Your greatest desires... literally.
 
-Type naturally or use commands.
-I can help with task management, code development, and more.
+🎯 Let go, and let Claude:
+• "I want to [describe your desire]" - Intelligent goal breakdown
+• "What should I focus on now?" - Desire-driven priorities  
+• "How close am I to [goal]?" - Progress toward dreams
+• "Break this down for me: [complex goal]" - Smart decomposition
 
-What would you like to work on today?`;
+💫 I transform your desires into reality through intelligent action.
+What's calling to you today?`;
 
   // Initialize with welcome message
   useEffect(() => {
@@ -78,106 +136,204 @@ What would you like to work on today?`;
     setMessages([welcomeMessage]);
   }, []);
 
-  // Handle conversational input with enhanced Claude-like responses
-  const handleConversationalInput = async (input: string): Promise<string> => {
-    const lowerInput = input.toLowerCase();
+  // Tab Persistence
+  const persistTabs = useCallback((tabsToSave: Tab[], activeId: string) => {
+    const tabsData = {
+      tabs: tabsToSave.map(tab => ({
+        id: tab.id,
+        type: tab.type,
+        title: tab.title,
+        closeable: tab.closeable,
+        taskId: tab.taskId
+      })),
+      activeTabId: activeId,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(TAB_STORAGE_KEY, JSON.stringify(tabsData));
+  }, []);
+
+  const restoreTabs = useCallback(async () => {
+    try {
+      const saved = localStorage.getItem(TAB_STORAGE_KEY);
+      if (saved) {
+        const { tabs: savedTabs, activeTabId: savedActiveId } = JSON.parse(saved);
+        
+        // Restore tabs and refetch task data for task tabs
+        const restoredTabs = await Promise.all(
+          savedTabs.map(async (savedTab: any) => {
+            if (savedTab.type === 'task' && savedTab.taskId) {
+              try {
+                const taskData = await taskMasterService.getTaskById(savedTab.taskId);
+                return {
+                  ...savedTab,
+                  data: taskData,
+                  title: taskData?.title || `Task #${savedTab.taskId}`
+                };
+              } catch (error) {
+                console.warn(`Failed to restore task data for tab ${savedTab.id}:`, error);
+                return null; // Filter out failed tabs
+              }
+            }
+            return savedTab;
+          })
+        );
+
+        const validTabs = restoredTabs.filter(Boolean) as Tab[];
+        
+        // Ensure chat tab exists
+        const hasChat = validTabs.some(tab => tab.id === 'chat');
+        if (!hasChat) {
+          validTabs.unshift({ id: 'chat', type: 'chat', title: 'Chat', closeable: false });
+        }
+
+        setTabs(validTabs);
+        
+        // Ensure active tab exists
+        const activeExists = validTabs.some(tab => tab.id === savedActiveId);
+        setActiveTabId(activeExists ? savedActiveId : 'chat');
+      }
+    } catch (error) {
+      console.error('Failed to restore tabs:', error);
+      // Reset to default if restoration fails
+      setTabs([{ id: 'chat', type: 'chat', title: 'Chat', closeable: false }]);
+      setActiveTabId('chat');
+    }
+  }, []);
+
+  // Tab Management Functions
+  const openTaskTab = useCallback(async (task: TaskMasterTask) => {
+    const tabId = `task-${task.id}`;
     
-    // Enhanced greeting responses
-    if (['hi', 'hello', 'hey', 'yo'].some(greeting => lowerInput.includes(greeting))) {
-      return `👋 Hello! Great to see you. I can see you have ${tasks.filter(t => t.status === 'pending').length} pending tasks and ${tasks.filter(t => t.status === 'in-progress').length} tasks in progress.\n\nI'm ready to help with your development work, task management, or any questions you have. What's on your mind?`;
+    // Check if tab already exists
+    const existingTab = tabs.find(tab => tab.id === tabId);
+    if (existingTab) {
+      setActiveTabId(tabId);
+      return;
     }
 
-    // Task-related queries
-    if (lowerInput.includes('task') || lowerInput.includes('todo') || lowerInput.includes('work')) {
-      const pendingTasks = tasks.filter(t => t.status === 'pending');
-      const inProgressTasks = tasks.filter(t => t.status === 'in-progress');
-      const highPriorityTasks = tasks.filter(t => t.priority === 'high' && t.status !== 'done');
-      
-      return `📋 Here's your current task overview:\n\n• ${pendingTasks.length} pending tasks\n• ${inProgressTasks.length} in progress\n• ${highPriorityTasks.length} high priority items\n\nNext recommended task: "${highPriorityTasks[0]?.title || 'No high priority tasks'}"\n\nWould you like me to help you prioritize, break down any of these tasks, or start working on something specific?`;
+    // Check tab limit
+    if (tabs.length >= MAX_TABS) {
+      console.warn('Maximum number of tabs reached');
+      return;
     }
 
-    // System status queries
-    if (lowerInput.includes('status') || lowerInput.includes('system') || lowerInput.includes('health')) {
-      return `🖥️ System Status Overview:\n\n✅ LangGraph Engine: ${systemStatus.langGraph ? 'Active' : 'Offline'}\n✅ Background Processor: ${systemStatus.backgroundProcessor ? 'Running (3 workers)' : 'Stopped'}\n✅ Local LLM: ${systemStatus.localLLM ? `Ready (${systemStatus.currentModel})` : 'Offline'}\n✅ TaskMaster MCP: ${systemStatus.taskMaster ? 'Connected' : 'Disconnected'}\n\nAll systems are operational and ready for productive work!`;
-    }
-
-    // Capability questions
-    if (lowerInput.includes('what') && (lowerInput.includes('do') || lowerInput.includes('can') || lowerInput.includes('help'))) {
-      return `🔧 I'm your comprehensive AI development companion. Here's what I can help with:\n\n**Task Management:**\n• Track and prioritize your development tasks\n• Break down complex features into manageable steps\n• Suggest optimal work sequences\n\n**Development Support:**\n• Code review and optimization suggestions\n• Architecture guidance and best practices\n• Debugging assistance and problem-solving\n\n**Intelligent Automation:**\n• Background workflow processing\n• Automated analysis and insights\n• Context-aware recommendations\n\n**Communication:**\n• Natural conversation about your projects\n• Technical explanations and documentation\n• Strategic planning and decision support\n\nI'm essentially like having Claude Code right in your desktop environment, with full access to your task management system. What would you like to explore?`;
-    }
-
-    // Try workflow engine for complex queries
-    if (window.electronAPI?.workflow?.processInput) {
-      try {
-        const result = await window.electronAPI.workflow.processInput(input);
-        if (result.success && result.data) {
-          const analysis = result.data.analysis;
-          return `🔍 I've analyzed your request (complexity: ${analysis.complexity}/10):\n\n${analysis.summary || 'Processing your request...'}\n\n${result.data.tasks?.length ? `💡 I can help break this down into ${result.data.tasks.length} actionable steps. Would you like me to show the breakdown?` : 'How would you like to proceed with this?'}`;
-        }
-      } catch (error) {
-        console.error('Workflow error:', error);
-      }
-    }
-
-    // Try local LLM
-    if (window.electronAPI?.localLLM?.query) {
-      try {
-        const result = await window.electronAPI.localLLM.query(input);
-        if (result.success && result.data) {
-          return `🤖 ${result.data}\n\nIs there anything specific about this you'd like me to elaborate on or help implement?`;
-        }
-      } catch (error) {
-        console.error('Local LLM error:', error);
-      }
-    }
-
-    // Enhanced fallback response
-    return `I understand you're asking about: "${input}"\n\nI'm here to help with development work, task management, and technical guidance. Could you tell me more about what you're trying to accomplish? I can:\n\n• Help analyze and break down the problem\n• Suggest implementation approaches\n• Connect it to your existing tasks\n• Provide code examples or guidance\n\nWhat specific aspect would you like to focus on?`;
-  };
-
-  // Handle message submission
-  const handleSubmit = async () => {
-    if (!currentInput.trim() || isProcessing) return;
-
-    const userMessage: Message = {
-      id: messages.length + 1,
-      text: currentInput,
-      type: 'user',
-      timestamp: new Date()
+    // Create new tab
+    const newTab: Tab = {
+      id: tabId,
+      type: 'task',
+      title: task.title,
+      closeable: true,
+      taskId: task.id,
+      data: task
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setCurrentInput('');
-    setIsProcessing(true);
+    const newTabs = [...tabs, newTab];
+    setTabs(newTabs);
+    setActiveTabId(tabId);
+    persistTabs(newTabs, tabId);
+  }, [tabs, persistTabs]);
 
-    try {
-      const response = await handleConversationalInput(currentInput);
-      
-      const assistantMessage: Message = {
-        id: messages.length + 2,
-        text: response,
-        type: 'assistant',
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      const errorMessage: Message = {
-        id: messages.length + 2,
-        text: `I encountered an error processing your request. Let me try a different approach. Could you rephrase or provide more context about what you need help with?`,
-        type: 'assistant',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsProcessing(false);
+  const openTerminalTab = useCallback(() => {
+    // Check tab limit
+    if (tabs.length >= MAX_TABS) {
+      console.warn('Maximum number of tabs reached');
+      return;
     }
-  };
 
-  // Handle key events
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Generate unique terminal tab ID
+    const terminalCount = tabs.filter(tab => tab.type === 'terminal').length;
+    const tabId = `terminal-${Date.now()}`;
+    const title = terminalCount === 0 ? 'Terminal' : `Terminal ${terminalCount + 1}`;
+
+    // Create new terminal tab
+    const newTab: Tab = {
+      id: tabId,
+      type: 'terminal',
+      title,
+      closeable: true
+    };
+
+    const newTabs = [...tabs, newTab];
+    setTabs(newTabs);
+    setActiveTabId(tabId);
+    persistTabs(newTabs, tabId);
+  }, [tabs, persistTabs]);
+
+  const closeTab = useCallback((tabId: string) => {
+    const tab = tabs.find(t => t.id === tabId);
+    if (!tab || !tab.closeable) return;
+
+    const newTabs = tabs.filter(t => t.id !== tabId);
+    setTabs(newTabs);
+
+    // Switch to chat if we closed the active tab
+    if (activeTabId === tabId) {
+      setActiveTabId('chat');
+      persistTabs(newTabs, 'chat');
+    } else {
+      persistTabs(newTabs, activeTabId);
+    }
+  }, [tabs, activeTabId, persistTabs]);
+
+  const switchToTab = useCallback((tabId: string) => {
+    if (tabs.some(tab => tab.id === tabId)) {
+      setActiveTabId(tabId);
+      persistTabs(tabs, tabId);
+    }
+  }, [tabs, persistTabs]);
+
+  // Keyboard Shortcuts
+  const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
     // Don't handle global keys if input is focused
     if (inputRef.current === document.activeElement) {
+      return;
+    }
+
+    // Tab switching shortcuts (Ctrl+1-8)
+    if ((e.ctrlKey || e.metaKey) && /^[1-8]$/.test(e.key)) {
+      e.preventDefault();
+      const tabIndex = parseInt(e.key) - 1;
+      if (tabs[tabIndex]) {
+        switchToTab(tabs[tabIndex].id);
+      }
+      return;
+    }
+
+    // Close tab (Ctrl+W)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
+      e.preventDefault();
+      if (activeTabId !== 'chat') {
+        closeTab(activeTabId);
+      }
+      return;
+    }
+
+    // New task tab (Ctrl+T) - placeholder for now
+    if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+      e.preventDefault();
+      // Focus input for task search/creation
+      setMode('insert');
+      setTimeout(() => inputRef.current?.focus(), 0);
+      return;
+    }
+
+    // Global font size shortcuts (work in any mode)
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === '+') {
+      e.preventDefault();
+      increaseFontSize();
+      return;
+    }
+    
+    if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+      e.preventDefault();
+      decreaseFontSize();
+      return;
+    }
+
+    // Toggle console log with Ctrl/Cmd + `
+    if ((e.ctrlKey || e.metaKey) && e.key === '`') {
+      e.preventDefault();
+      setShowConsoleLog(!showConsoleLog);
       return;
     }
 
@@ -193,6 +349,15 @@ What would you like to work on today?`;
           setMode('insert');
           setTimeout(() => inputRef.current?.focus(), 0);
           break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          increaseFontSize();
+          break;
+        case '-':
+          e.preventDefault();
+          decreaseFontSize();
+          break;
       }
     } else if (mode === 'insert') {
       switch (e.key) {
@@ -203,7 +368,410 @@ What would you like to work on today?`;
           break;
       }
     }
-  }, [mode]);
+  }, [mode, showConsoleLog, tabs, activeTabId, switchToTab, closeTab]);
+
+  // Task Management Functions
+  const handleTaskStatusChange = useCallback(async (taskId: string, status: TaskMasterTask['status']) => {
+    try {
+      const success = await taskMasterService.updateTaskStatus(taskId, status);
+      if (success) {
+        // Refresh tasks and update tab data
+        await fetchRealTasks();
+        
+        // Update tab data if this task is open
+        const tabId = `task-${taskId}`;
+        const tab = tabs.find(t => t.id === tabId);
+        if (tab && tab.data) {
+          const updatedTabs = tabs.map(t => 
+            t.id === tabId 
+              ? { ...t, data: { ...t.data, status } }
+              : t
+          );
+          setTabs(updatedTabs);
+          persistTabs(updatedTabs, activeTabId);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+    }
+  }, [tabs, activeTabId, persistTabs]);
+
+  const handleTaskEdit = useCallback((task: TaskMasterTask) => {
+    setEditingTask(task);
+    setEditForm({
+      title: task.title,
+      description: task.description,
+      priority: task.priority,
+      status: task.status
+    });
+    setShowEditModal(true);
+  }, []);
+
+  // Fetch real tasks from TaskMaster
+  const fetchRealTasks = useCallback(async () => {
+    try {
+      setIsLoadingTasks(true);
+      console.log('🔄 Fetching real tasks from TaskMaster...');
+      
+      const tasksData = await taskMasterService.getTasks(true);
+      
+      if (tasksData.tasks.length > 0) {
+        setRealTasks(tasksData.tasks);
+        setTaskMetrics(tasksData.stats);
+        setHasTaskMasterSetup(true);
+        console.log(`✅ Loaded ${tasksData.tasks.length} real tasks from TaskMaster`);
+      } else {
+        setRealTasks([]);
+        setTaskMetrics(tasksData.stats);
+        setHasTaskMasterSetup(true); // TaskMaster is set up, just no tasks yet
+        console.log('📭 No tasks found in TaskMaster');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching real tasks:', error);
+      setHasTaskMasterSetup(false);
+      setRealTasks([]);
+    } finally {
+      setIsLoadingTasks(false);
+    }
+  }, []);
+
+  const handleSaveTaskEdit = useCallback(async () => {
+    if (!editingTask) return;
+    
+    try {
+      // Update task status if changed
+      if (editForm.status !== editingTask.status) {
+        await taskMasterService.updateTaskStatus(editingTask.id, editForm.status);
+      }
+      
+      // Update task details using the update function
+      if (editForm.title !== editingTask.title || editForm.description !== editingTask.description) {
+        const updatePrompt = `Update task details:
+Title: "${editForm.title}"
+Description: "${editForm.description}"
+Priority: ${editForm.priority}`;
+        
+        const projectRoot = await window.electronAPI.getProjectRoot();
+        await window.electronAPI.callMCPTool('mcp_task-master-ai_update_task', {
+          projectRoot,
+          id: editingTask.id,
+          prompt: updatePrompt
+        });
+      }
+      
+      // Refresh tasks and close modal
+      await fetchRealTasks();
+      setShowEditModal(false);
+      setEditingTask(null);
+      
+      // Show success message
+      const successMessage: Message = {
+        id: messages.length + 1,
+        text: `✅ **Task Updated Successfully!**\n\n**Task #${editingTask.id}:** ${editForm.title}\n\n🎯 Your task has been updated with the new details and status.`,
+        type: 'assistant',
+        timestamp: new Date(),
+        thought: "Updated task details through intelligent task management",
+        toolsUsed: ['TaskMaster MCP', 'Task Update AI']
+      };
+      setMessages(prev => [...prev, successMessage]);
+      
+    } catch (error) {
+      console.error('Error updating task:', error);
+      const errorMessage: Message = {
+        id: messages.length + 1,
+        text: `❌ **Failed to update task**\n\nThere was an error updating the task. Please try again or update it through the chat.`,
+        type: 'assistant',
+        timestamp: new Date(),
+        thought: "Task update failed"
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
+  }, [editingTask, editForm, fetchRealTasks, messages.length]);
+
+  const handleCancelTaskEdit = useCallback(() => {
+    setShowEditModal(false);
+    setEditingTask(null);
+  }, []);
+
+  // Text selection to task creation
+  const handleTextSelection = useCallback((e: MouseEvent) => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().trim().length > 10) {
+      const selectedContent = selection.toString().trim();
+      setSelectedText(selectedContent);
+      setContextMenuPosition({ x: e.clientX, y: e.clientY });
+      setShowContextMenu(true);
+    } else {
+      setShowContextMenu(false);
+    }
+  }, []);
+
+  const handleCreateTaskFromSelection = useCallback(async () => {
+    if (!selectedText.trim()) return;
+    
+    setIsCreatingTaskFromSelection(true);
+    setShowContextMenu(false);
+    
+    try {
+      const taskTitle = selectedText.length > 50 
+        ? selectedText.substring(0, 50) + '...' 
+        : selectedText;
+      
+      const success = await taskMasterService.createTask(
+        `Process: ${taskTitle}`,
+        `Based on selected content:\n\n"${selectedText}"\n\nCreate appropriate action items to address this content.`,
+        'medium'
+      );
+      
+      if (success) {
+        const successMessage: Message = {
+          id: messages.length + 1,
+          text: `✅ **Task Created from Selection!**\n\n**Selected Text:** "${taskTitle}"\n\n🎯 I've created an intelligent task based on your selection. The task includes the full context and will help you take action on this content.\n\n💡 *Pro tip: Select any text and right-click to instantly create contextual tasks!*`,
+          type: 'assistant',
+          timestamp: new Date(),
+          thought: "Created task from selected text using AI enhancement",
+          toolsUsed: ['TaskMaster AI', 'Context Analysis']
+        };
+        
+        setMessages(prev => [...prev, successMessage]);
+        
+        // Refresh tasks to show the new one
+        await fetchRealTasks();
+      } else {
+        throw new Error('Failed to create task');
+      }
+    } catch (error) {
+      const errorMessage: Message = {
+        id: messages.length + 1,
+        text: `❌ **Could not create task from selection**\n\nTry describing what you want to do with this content in the chat instead.`,
+        type: 'assistant',
+        timestamp: new Date(),
+        thought: "Task creation from selection failed"
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      console.error('Error creating task from selection:', error);
+    } finally {
+      setIsCreatingTaskFromSelection(false);
+      setSelectedText('');
+    }
+  }, [selectedText, messages.length, fetchRealTasks]);
+
+  const handleCloseContextMenu = useCallback(() => {
+    setShowContextMenu(false);
+    setSelectedText('');
+  }, []);
+
+  const handleTaskRefresh = useCallback(async (taskId: string) => {
+    try {
+      const updatedTask = await taskMasterService.getTaskById(taskId);
+      if (updatedTask) {
+        const tabId = `task-${taskId}`;
+        const updatedTabs = tabs.map(tab => 
+          tab.id === tabId 
+            ? { ...tab, data: updatedTask, title: updatedTask.title }
+            : tab
+        );
+        setTabs(updatedTabs);
+        persistTabs(updatedTabs, activeTabId);
+      }
+    } catch (error) {
+      console.error('Failed to refresh task:', error);
+    }
+  }, [tabs, activeTabId, persistTabs]);
+
+  // Fetch intelligence insights
+  const fetchIntelligenceInsights = useCallback(async () => {
+    try {
+      const insights = await taskMasterService.getIntelligenceInsights();
+      setIntelligenceInsights(insights);
+    } catch (error) {
+      console.error('Failed to fetch intelligence insights:', error);
+    }
+  }, []);
+
+  // Initialize everything
+  useEffect(() => {
+    const initializeApp = async () => {
+      // Check for first-run setup
+      try {
+        const isFirstRunCheck = await window.electronAPI?.isFirstRun();
+        setIsFirstRun(isFirstRunCheck || false);
+        if (isFirstRunCheck) {
+          setShowFirstRunSetup(true);
+          return; // Don't initialize until setup is complete
+        }
+      } catch (error) {
+        console.error('Failed to check first-run status:', error);
+      }
+
+      // Restore tabs first
+      await restoreTabs();
+      
+      // Initialize Engie orchestrator
+      await engieOrchestrator.initialize();
+      console.log('🧠 Engie AI brain initialized');
+      
+      // Set up callback for task updates
+      engieOrchestrator.setTasksUpdatedCallback(() => {
+        console.log('🔄 Tasks updated, refreshing sidebar...');
+        fetchRealTasks();
+        fetchIntelligenceInsights();
+      });
+      
+      // Fetch tasks and intelligence insights on load
+      await fetchRealTasks();
+      await fetchIntelligenceInsights();
+    };
+
+    initializeApp();
+    
+    // Refresh tasks and insights every 30 seconds
+    const refreshInterval = setInterval(() => {
+      fetchRealTasks();
+      fetchIntelligenceInsights();
+    }, 30000);
+    
+    return () => clearInterval(refreshInterval);
+  }, [restoreTabs, fetchRealTasks, fetchIntelligenceInsights]);
+
+  // Set up keyboard listeners
+  useEffect(() => {
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleGlobalKeyDown]);
+
+  // Set up text selection listeners
+  useEffect(() => {
+    document.addEventListener('mouseup', handleTextSelection);
+    document.addEventListener('click', handleCloseContextMenu);
+    return () => {
+      document.removeEventListener('mouseup', handleTextSelection);
+      document.removeEventListener('click', handleCloseContextMenu);
+    };
+  }, [handleTextSelection, handleCloseContextMenu]);
+
+  // Font size management
+  const increaseFontSize = () => {
+    const sizes: Array<'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'> = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
+    const currentIndex = sizes.indexOf(fontSize);
+    if (currentIndex < sizes.length - 1) {
+      setFontSize(sizes[currentIndex + 1]);
+    }
+  };
+
+  const decreaseFontSize = () => {
+    const sizes: Array<'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'> = ['xs', 'sm', 'md', 'lg', 'xl', 'xxl'];
+    const currentIndex = sizes.indexOf(fontSize);
+    if (currentIndex > 0) {
+      setFontSize(sizes[currentIndex - 1]);
+    }
+  };
+
+  // Enhanced conversational input with intelligent orchestration
+  const handleConversationalInput = useCallback(async (input: string): Promise<{ text: string; thought?: string; toolsUsed?: string[] }> => {
+    const lowerInput = input.toLowerCase();
+    
+    // Check for help/command queries first
+    if (lowerInput.includes('help') || lowerInput.includes('what can you do') || lowerInput.includes('commands')) {
+      return {
+            text: `🧠 **ENGIE: Enhanced Neural Gateway for Intelligent Execution**\n\n**Let go and let Claude.**\n\n**🧠 AI-Powered Second Brain:**\n• Task Management with MCP Server Integration\n• Claude CLI Auto-Installation & Management\n• Intelligent Project Orchestration\n• "What should I focus on now?" - Get desire-driven priorities\n• "How close am I to [goal]?" - Track progress toward your dreams\n• "Break this down: [complex aspiration]" - Smart goal decomposition\n\n**💫 Natural Conversation:**\nJust tell me what's calling to you:\n• "I want to build an app that helps people..."\n• "My biggest goal right now is..."\n• "I'm feeling stuck with..."\n• "I dream of creating..."\n\n**🧠 Let go, and let Claude:**\nI balance your immediate desires with long-term aspirations, using AI to navigate the optimal path forward. I'm not just managing tasks—I'm orchestrating your entire goal achievement system.\n\n**Philosophy:** Trust the intelligence. I handle the complexity while you focus on what truly matters to you.`,
+        thought: "Sharing my core philosophy of desire-driven goal achievement"
+      };
+    }
+
+    // Use Engie orchestrator for intelligent processing
+    try {
+      console.log('🧠 Engie processing:', input);
+      const response = await engieOrchestrator.processUserInput(input);
+      
+      // Add this interaction to context for future reference
+      engieOrchestrator.addContext({
+        type: 'user_interaction',
+        input,
+        response: response.result,
+        toolsUsed: response.toolsUsed
+      });
+      
+      return {
+        text: response.result,
+        thought: response.thought,
+        toolsUsed: response.toolsUsed
+      };
+    } catch (error) {
+      console.error('Engie orchestration error:', error);
+      
+      // Fallback to basic LLM conversation
+      if (window.electronAPI?.localLLM?.query) {
+        try {
+          const fallbackPrompt = `As ENGIE, the Enhanced Neural Gateway for Intelligent Execution, respond to: "${input}"\n\nCore philosophy: "Let go and let Claude" - I help transform desires into reality through intelligent AI-powered task management and second brain capabilities. I balance immediate wants with long-term aspirations. My mantra is "Let go, and let Claude" - trust the AI to handle complexity while you focus on what matters.\n\nBe conversational, desire-focused, and action-oriented.`;
+          
+          const result = await window.electronAPI.localLLM.query(fallbackPrompt);
+          if (result.success && result.data) {
+            let responseText = result.data;
+            if (typeof responseText === 'object') {
+              responseText = responseText.data || responseText.response || String(responseText);
+            }
+            
+            return {
+              text: `🎯 ${responseText}\n\n*💫 Let go, and let Claude - I'm here to navigate your path to what you truly want.*`,
+              thought: "Using desire-focused conversation mode"
+            };
+          }
+        } catch (llmError) {
+          console.error('Fallback LLM error:', llmError);
+        }
+      }
+      
+      // Final fallback
+      return {
+          text: `I hear you asking about: "${input}"\n\nI'm ENGIE - your Enhanced Neural Gateway for Intelligent Execution. 🧠\n\n**Let go and let Claude.**\n\nI'm here to help transform what you want into reality through AI-powered task management:\n• Tell me what you're trying to achieve\n• Share what's calling to you right now\n• Describe your vision, and I'll help you get there\n\n💫 Let go, and let Claude - what's your heart telling you to focus on?`,
+        thought: "Encouraging desire-driven conversation"
+      };
+    }
+  }, []);
+
+  // Handle message submission with enhanced response
+  const handleSubmit = useCallback(async () => {
+    if (!currentInput.trim() || isProcessing) return;
+
+    const userMessage: Message = {
+      id: messages.length + 1,
+      text: currentInput,
+      type: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    const inputText = currentInput;
+    setCurrentInput('');
+    setIsProcessing(true);
+
+    try {
+      const response = await handleConversationalInput(inputText);
+      
+      const assistantMessage: Message = {
+        id: messages.length + 2,
+        text: response.text,
+        type: 'assistant',
+        timestamp: new Date(),
+        thought: response.thought,
+        toolsUsed: response.toolsUsed
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        text: `I encountered an error processing your request. Let me know what you'd like to work on and I'll help you with a different approach.`,
+        type: 'assistant',
+        timestamp: new Date(),
+        thought: "Error occurred during processing"
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [currentInput, isProcessing, messages.length, handleConversationalInput]);
 
   // Handle input key events
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -212,12 +780,6 @@ What would you like to work on today?`;
       handleSubmit();
     }
   }, [handleSubmit]);
-
-  // Set up keyboard listeners
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -228,10 +790,10 @@ What would you like to work on today?`;
 
   // Focus management
   useEffect(() => {
-    if (mode === 'insert') {
+    if (mode === 'insert' && activeTabId === 'chat') {
       inputRef.current?.focus();
     }
-  }, [mode]);
+  }, [mode, activeTabId]);
 
   // Focus input on mount
   useEffect(() => {
@@ -239,11 +801,17 @@ What would you like to work on today?`;
   }, []);
 
   const getPriorityTasks = () => {
-    return tasks
+    if (!hasTaskMasterSetup) {
+      return [];
+    }
+    
+    return realTasks
       .filter(task => task.status !== 'done')
       .sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
+        const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
+        const aPriority = priorityOrder[a.priority as string] || 1;
+        const bPriority = priorityOrder[b.priority as string] || 1;
+        return bPriority - aPriority;
       })
       .slice(0, 5);
   };
@@ -267,15 +835,189 @@ What would you like to work on today?`;
     }
   };
 
-  return (
-    <div className="terminal-container">
-      {/* Header with system status */}
-      <div className="terminal-header">
-        <div className="terminal-controls">
-          <div className="control-button close"></div>
-          <div className="control-button minimize"></div>
-          <div className="control-button maximize"></div>
+  const handleCreateFirstTasks = async () => {
+    const createTaskMessage: Message = {
+      id: messages.length + 1,
+      text: "I'd love to help you create your first tasks! What would you like to accomplish? \n\nFor example, you could say:\n• \"Create task: Set up development environment\"\n• \"I want to build a web application\"\n• \"Help me plan a mobile app project\"\n\nJust describe what you're working on and I'll create intelligent, well-structured tasks for you!",
+      type: 'assistant',
+      timestamp: new Date(),
+      thought: "Prompting user to create their first tasks"
+    };
+    
+    setMessages(prev => [...prev, createTaskMessage]);
+    setMode('insert');
+    setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  // Render tab content based on active tab
+  const renderTabContent = () => {
+    const activeTab = tabs.find(tab => tab.id === activeTabId);
+    
+    if (!activeTab) {
+      return <div>Tab not found</div>;
+    }
+
+    if (activeTab.type === 'chat') {
+      return (
+        <div className="tab-content">
+          {/* Enhanced Chat Area */}
+          <div className="chat-section">
+            <div ref={messagesRef} className="messages-container">
+              {messages.map((message) => (
+                <div key={message.id} className={`message ${message.type}`}>
+                  <div className="message-header">
+                    <span className="message-sender">
+                      {message.type === 'user' ? '👤 You' : '🎯 ENGIE'}
+                    </span>
+                    <span className="message-time">
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {message.toolsUsed && message.toolsUsed.length > 0 && (
+                      <span className="tools-used" title={`Tools used: ${message.toolsUsed.join(', ')}`}>
+                        🔧 {message.toolsUsed.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="message-content">
+                    {message.thought && message.type === 'assistant' && (
+                      <div className="message-thought">
+                        💭 <em>{message.thought}</em>
+                      </div>
+                    )}
+                    <div className="message-text">{message.text}</div>
+                  </div>
+                </div>
+              ))}
+              
+              {isProcessing && (
+                <div className="message assistant">
+                  <div className="message-header">
+                    <span className="message-sender">🎯 ENGIE</span>
+                    <span className="message-time">Now</span>
+                  </div>
+                  <div className="message-content">
+                    <div className="message-thought">
+                      💭 <em>Navigating the path to your desires and finding the optimal approach...</em>
+                    </div>
+                    <div className="typing-indicator">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Enhanced Input Area */}
+            <div className="input-section">
+              <div className="input-container">
+                <textarea
+                  ref={inputRef}
+                  value={currentInput}
+                  onChange={(e) => setCurrentInput(e.target.value)}
+                  onKeyDown={handleInputKeyDown}
+                  className="message-input"
+                  placeholder="🧠 Hi! I'm ENGIE - your Enhanced Neural Gateway for Intelligent Execution. Let go and let Claude... (Try: 'help' or 'I want to...')"
+                  disabled={isProcessing}
+                  rows={1}
+                  autoFocus
+                />
+                <button 
+                  onClick={handleSubmit}
+                  disabled={!currentInput.trim() || isProcessing}
+                  className="send-button"
+                >
+                  <span>⏎</span>
+                </button>
+              </div>
+              <div className="input-hint">
+                {mode === 'insert' ? 'ESC: normal mode • Enter: send • Shift+Enter: new line • Ctrl+1-8: tabs • Ctrl+W: close' : 'i: insert mode • Enter: activate • +/-: font size • Ctrl+1-8: tabs'}
+              </div>
+            </div>
+          </div>
         </div>
+      );
+    }
+
+    if (activeTab.type === 'task' && activeTab.data) {
+      return (
+        <div className="tab-content">
+          <TaskViewer
+            task={activeTab.data}
+            onEdit={handleTaskEdit}
+            onStatusChange={handleTaskStatusChange}
+            onRefresh={handleTaskRefresh}
+          />
+        </div>
+      );
+    }
+
+    if (activeTab.type === 'terminal') {
+      return (
+        <div className="tab-content h-full">
+          <Terminal className="h-full" />
+        </div>
+      );
+    }
+
+    return <div className="tab-content">Loading...</div>;
+  };
+
+  // Handle first-run setup completion
+  const handleFirstRunComplete = async () => {
+    setShowFirstRunSetup(false);
+    setIsFirstRun(false);
+    
+    // Initialize the app after setup is complete
+    try {
+      await restoreTabs();
+      await engieOrchestrator.initialize();
+      console.log('🧠 Engie AI brain initialized');
+      
+      engieOrchestrator.setTasksUpdatedCallback(() => {
+        console.log('🔄 Tasks updated, refreshing sidebar...');
+        fetchRealTasks();
+        fetchIntelligenceInsights();
+      });
+      
+      await fetchRealTasks();
+      await fetchIntelligenceInsights();
+    } catch (error) {
+      console.error('Failed to initialize app after setup:', error);
+    }
+  };
+
+  // Handle opening API key settings
+  const handleOpenApiKeySettings = () => {
+    setShowApiKeySettings(true);
+  };
+
+  const handleCloseApiKeySettings = () => {
+    setShowApiKeySettings(false);
+  };
+
+  // Show first-run setup if needed
+  if (showFirstRunSetup) {
+    return <FirstRunSetup onComplete={handleFirstRunComplete} />;
+  }
+
+  // Show API key settings modal if open
+  if (showApiKeySettings) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-900 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto m-4">
+          <ApiKeySettings onClose={handleCloseApiKeySettings} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`terminal-container font-${fontSize}`}>
+      {/* Header with enhanced status */}
+      <div className="terminal-header">
+
         <div className="terminal-title">
           <div className="engie-ascii">
             <div>███████╗███╗   ██╗ ██████╗ ██╗███████╗</div>
@@ -284,106 +1026,153 @@ What would you like to work on today?`;
             <div>██╔══╝  ██║╚██╗██║██║   ██║██║██╔══╝  </div>
             <div>███████╗██║ ╚████║╚██████╔╝██║███████╗</div>
           </div>
-          <span className="subtitle">AI Desktop Companion - {mode.toUpperCase()} MODE</span>
+                          <span className="subtitle">Enhanced Neural Gateway for Intelligent Execution</span>
         </div>
         <div className="system-status">
           <span className={`status-indicator ${systemStatus.langGraph ? 'active' : 'inactive'}`}>LG</span>
           <span className={`status-indicator ${systemStatus.backgroundProcessor ? 'active' : 'inactive'}`}>BP</span>
           <span className={`status-indicator ${systemStatus.localLLM ? 'active' : 'inactive'}`}>AI</span>
           <span className={`status-indicator ${systemStatus.taskMaster ? 'active' : 'inactive'}`}>TM</span>
+          <span
+            className="status-indicator active"
+            title="ENGIE: Enhanced Neural Gateway for Intelligent Execution - Let go and let Claude"
+          >
+            🎯
+          </span>
+          <button
+            className="settings-button"
+            onClick={handleOpenApiKeySettings}
+            title="Open API Key Settings"
+          >
+            ⚙️
+          </button>
         </div>
       </div>
 
+      {/* Tab Bar */}
+      <TabBar
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onTabSelect={switchToTab}
+        onTabClose={closeTab}
+        onNewTab={openTerminalTab}
+        maxTabs={MAX_TABS}
+      />
+
       <div className="main-content">
-        {/* Chat Area */}
-        <div className="chat-section">
-          <div ref={messagesRef} className="messages-container">
-            {messages.map((message) => (
-              <div key={message.id} className={`message ${message.type}`}>
-                <div className="message-header">
-                  <span className="message-sender">
-                    {message.type === 'user' ? '👤 You' : message.type === 'system' ? '🤖 Engie' : '🤖 Engie'}
-                  </span>
-                  <span className="message-time">
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-                <div className="message-content">
-                  {message.text.split('\n').map((line, index) => (
-                    <div key={index} className="message-line">
-                      {line}
-                    </div>
-                  ))}
-                </div>
+        {/* Tab Content */}
+        {renderTabContent()}
+
+        {/* Enhanced Task Management Sidebar */}
+        <div className="task-sidebar">
+          <div className="sidebar-section">
+            <div className="section-header">
+              <span className="section-title">🧠 Engie AI Intelligence</span>
+              <span className="task-count">Learning</span>
+            </div>
+            <div className="system-info">
+              <div className="system-item">
+                <span className="system-label">Patterns</span>
+                <span className="system-value connected">{intelligenceInsights.totalPatterns}</span>
               </div>
-            ))}
+              <div className="system-item">
+                <span className="system-label">Effectiveness</span>
+                <span className="system-value connected">{Math.round(intelligenceInsights.avgEffectiveness * 100)}%</span>
+              </div>
+              <div className="system-item">
+                <span className="system-label">Learning Rate</span>
+                <span className="system-value connected">{Math.round(intelligenceInsights.learningRate * 100)}%</span>
+              </div>
+              <div className="system-item">
+                <span className="system-label">Recent Activity</span>
+                <span className="system-value connected">
+                  {intelligenceInsights.recentActivity.commits}C / {intelligenceInsights.recentActivity.tasks}T
+                </span>
+              </div>
+            </div>
             
-            {isProcessing && (
-              <div className="message assistant">
-                <div className="message-header">
-                  <span className="message-sender">🤖 Engie</span>
-                  <span className="message-time">Now</span>
-                </div>
-                <div className="message-content">
-                  <div className="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+            {intelligenceInsights.recommendations.length > 0 && (
+              <div className="task-list">
+                <div className="task-item">
+                  <div className="task-icons">💡</div>
+                  <div className="task-details">
+                    <div className="task-title">AI Insights</div>
+                    <div className="task-meta" style={{ fontSize: '11px', lineHeight: '1.3' }}>
+                      {intelligenceInsights.recommendations[0]}
+                    </div>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Input Area */}
-          <div className="input-section">
-            <div className="input-container">
-              <textarea
-                ref={inputRef}
-                value={currentInput}
-                onChange={(e) => setCurrentInput(e.target.value)}
-                onKeyDown={handleInputKeyDown}
-                className="message-input"
-                placeholder="Ask me anything about your tasks, code, or development work..."
-                disabled={isProcessing}
-                rows={1}
-                autoFocus
-              />
-              <button 
-                onClick={handleSubmit}
-                disabled={!currentInput.trim() || isProcessing}
-                className="send-button"
-              >
-                <span>⏎</span>
-              </button>
-            </div>
-            <div className="input-hint">
-              {mode === 'insert' ? 'ESC: normal mode • Enter: send • Shift+Enter: new line' : 'i: insert mode • Enter: activate'}
-            </div>
-          </div>
-        </div>
-
-        {/* Task Management Sidebar */}
-        <div className="task-sidebar">
           <div className="sidebar-section">
             <div className="section-header">
               <span className="section-title">🎯 Priority Tasks</span>
-              <span className="task-count">{getPriorityTasks().length}</span>
+              <span className="task-count">
+                {getPriorityTasks().length}
+              </span>
             </div>
-            <div className="task-list">
-              {getPriorityTasks().map((task) => (
-                <div key={task.id} className={`task-item ${task.status}`}>
-                  <div className="task-icons">
-                    {getStatusIcon(task.status)}
-                    {getPriorityIcon(task.priority)}
-                  </div>
+            
+            {isLoadingTasks ? (
+              <div className="task-list">
+                <div className="task-item">
+                  <div className="task-icons">⏳</div>
                   <div className="task-details">
-                    <div className="task-title">{task.title}</div>
-                    <div className="task-meta">#{task.id} • {task.status}</div>
+                    <div className="task-title">Loading your tasks...</div>
+                    <div className="task-meta">Fetching from TaskMaster</div>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : !hasTaskMasterSetup ? (
+              <div className="task-list">
+                <div className="task-item setup-prompt" onClick={handleCreateFirstTasks}>
+                  <div className="task-icons">🚀</div>
+                  <div className="task-details">
+                    <div className="task-title">Get Started with Tasks</div>
+                    <div className="task-meta">Click to create your first task</div>
+                  </div>
+                </div>
+                <div className="task-item">
+                  <div className="task-icons">💡</div>
+                  <div className="task-details">
+                    <div className="task-title">Tell me what you want to accomplish</div>
+                    <div className="task-meta">I'll create intelligent tasks for you</div>
+                  </div>
+                </div>
+              </div>
+            ) : getPriorityTasks().length === 0 ? (
+              <div className="task-list">
+                <div className="task-item setup-prompt" onClick={handleCreateFirstTasks}>
+                  <div className="task-icons">✨</div>
+                  <div className="task-details">
+                    <div className="task-title">All Tasks Complete!</div>
+                    <div className="task-meta">Tell me what you want to work on next</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="task-list">
+                {getPriorityTasks().map((task) => (
+                  <div 
+                    key={task.id} 
+                    className={`task-item ${task.status || 'pending'}`}
+                    onClick={() => openTaskTab(task)}
+                    style={{ cursor: 'pointer' }}
+                    title={`Click to open Task #${task.id} in new tab`}
+                  >
+                    <div className="task-icons">
+                      {getStatusIcon(task.status || 'pending')}
+                      {getPriorityIcon(task.priority || 'medium')}
+                    </div>
+                    <div className="task-details">
+                      <div className="task-title">{task.title || `Task ${task.id}`}</div>
+                      <div className="task-meta">#{task.id} • {task.status || 'pending'}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="sidebar-section">
@@ -393,15 +1182,57 @@ What would you like to work on today?`;
             <div className="progress-stats">
               <div className="stat-item">
                 <span className="stat-label">Done</span>
-                <span className="stat-value">{tasks.filter(t => t.status === 'done').length}</span>
+                <span className="stat-value">{taskMetrics.completed}</span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">In Progress</span>
-                <span className="stat-value">{tasks.filter(t => t.status === 'in-progress').length}</span>
+                <span className="stat-value">{taskMetrics.inProgress}</span>
               </div>
               <div className="stat-item">
                 <span className="stat-label">Pending</span>
-                <span className="stat-value">{tasks.filter(t => t.status === 'pending').length}</span>
+                <span className="stat-value">{taskMetrics.pending}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="sidebar-section">
+            <div className="section-header">
+              <span className="section-title">🧠 AI Commands</span>
+            </div>
+            <div className="system-info">
+              <div className="system-item">
+                <span className="system-label">Quick Actions</span>
+                <span className="system-value connected">Ready</span>
+              </div>
+            </div>
+            <div className="task-list">
+              <div className="task-item" title="Type: create task [description]">
+                <div className="task-icons">🎯</div>
+                <div className="task-details">
+                  <div className="task-title">AI Task Creation</div>
+                  <div className="task-meta">create task ...</div>
+                </div>
+              </div>
+              <div className="task-item" title="Type: generate commit">
+                <div className="task-icons">💡</div>
+                <div className="task-details">
+                  <div className="task-title">Smart Commits</div>
+                  <div className="task-meta">generate commit</div>
+                </div>
+              </div>
+              <div className="task-item" title="Type: list tasks">
+                <div className="task-icons">📋</div>
+                <div className="task-details">
+                  <div className="task-title">Task Overview</div>
+                  <div className="task-meta">list tasks</div>
+                </div>
+              </div>
+              <div className="task-item" title="Type: analyze tasks">
+                <div className="task-icons">📊</div>
+                <div className="task-details">
+                  <div className="task-title">Task Analysis</div>
+                  <div className="task-meta">analyze tasks</div>
+                </div>
               </div>
             </div>
           </div>
@@ -425,6 +1256,220 @@ What would you like to work on today?`;
           </div>
         </div>
       </div>
+
+      {/* Text Selection Context Menu */}
+      {showContextMenu && (
+        <div 
+          className="context-menu"
+          style={{
+            position: 'fixed',
+            left: contextMenuPosition.x + 'px',
+            top: contextMenuPosition.y + 'px',
+            zIndex: 10000,
+            backgroundColor: 'var(--terminal-bg)',
+            border: '1px solid var(--terminal-border)',
+            borderRadius: '4px',
+            padding: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            minWidth: '200px'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="context-menu-header">
+            <span className="context-menu-title">🎯 Selected Text Actions</span>
+          </div>
+          <div className="context-menu-item">
+            <strong>"{selectedText.length > 40 ? selectedText.substring(0, 40) + '...' : selectedText}"</strong>
+          </div>
+          <div 
+            className="context-menu-item clickable"
+            onClick={handleCreateTaskFromSelection}
+            style={{
+              padding: '8px',
+              cursor: 'pointer',
+              borderTop: '1px solid var(--terminal-border)',
+              marginTop: '4px'
+            }}
+          >
+            {isCreatingTaskFromSelection ? (
+              <span>🔄 Creating intelligent task...</span>
+            ) : (
+              <span>🎯 Create Task from Selection</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Task Edit Modal */}
+      {showEditModal && editingTask && (
+        <div 
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 20000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          onClick={handleCancelTaskEdit}
+        >
+          <div 
+            className="edit-modal"
+            style={{
+              backgroundColor: 'var(--terminal-bg)',
+              border: '1px solid var(--terminal-border)',
+              borderRadius: '8px',
+              padding: '24px',
+              minWidth: '500px',
+              maxWidth: '80%',
+              maxHeight: '80%',
+              overflow: 'auto'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header" style={{ marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, color: 'var(--terminal-text)' }}>
+                🎯 Edit Task #{editingTask.id}
+              </h3>
+            </div>
+            
+            <div className="modal-body">
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--terminal-text)' }}>
+                  Title:
+                </label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    backgroundColor: 'var(--terminal-bg)',
+                    border: '1px solid var(--terminal-border)',
+                    borderRadius: '4px',
+                    color: 'var(--terminal-text)',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--terminal-text)' }}>
+                  Description:
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    backgroundColor: 'var(--terminal-bg)',
+                    border: '1px solid var(--terminal-border)',
+                    borderRadius: '4px',
+                    color: 'var(--terminal-text)',
+                    fontSize: '14px',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+              
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--terminal-text)' }}>
+                    Priority:
+                  </label>
+                  <select
+                    value={editForm.priority}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, priority: e.target.value as 'high' | 'medium' | 'low' }))}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      backgroundColor: 'var(--terminal-bg)',
+                      border: '1px solid var(--terminal-border)',
+                      borderRadius: '4px',
+                      color: 'var(--terminal-text)',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="high">🔴 High</option>
+                    <option value="medium">🟡 Medium</option>
+                    <option value="low">🟢 Low</option>
+                  </select>
+                </div>
+                
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: 'var(--terminal-text)' }}>
+                    Status:
+                  </label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value as TaskMasterTask['status'] }))}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      backgroundColor: 'var(--terminal-bg)',
+                      border: '1px solid var(--terminal-border)',
+                      borderRadius: '4px',
+                      color: 'var(--terminal-text)',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="pending">⏳ Pending</option>
+                    <option value="in-progress">🔄 In Progress</option>
+                    <option value="done">✅ Done</option>
+                    <option value="blocked">❌ Blocked</option>
+                    <option value="deferred">⏸️ Deferred</option>
+                    <option value="cancelled">🚫 Cancelled</option>
+                    <option value="review">👀 Review</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <div className="modal-footer" style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleCancelTaskEdit}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: 'transparent',
+                  border: '1px solid var(--terminal-border)',
+                  borderRadius: '4px',
+                  color: 'var(--terminal-text)',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTaskEdit}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: 'var(--terminal-accent)',
+                  border: '1px solid var(--terminal-accent)',
+                  borderRadius: '4px',
+                  color: 'var(--terminal-bg)',
+                  cursor: 'pointer'
+                }}
+              >
+                💾 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Console Log Component */}
+      <ConsoleLog 
+        isVisible={showConsoleLog} 
+        onToggle={() => setShowConsoleLog(!showConsoleLog)} 
+      />
     </div>
   );
 };

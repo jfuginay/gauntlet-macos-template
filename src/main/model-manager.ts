@@ -22,12 +22,22 @@ export class ModelManager {
   private downloadInProgress = false;
   private progressCallback?: (progress: number, status: string) => void;
 
-  // Recommended models for Engie (ordered by preference)
+  // Recommended models for Engie (ordered by speed/performance)
   private readonly RECOMMENDED_MODELS: ModelInfo[] = [
+    {
+      name: 'gemma2:2b',
+      size: '1.6GB',
+      description: 'Google\'s fastest model - optimized for quick responses'
+    },
+    {
+      name: 'phi3:3.8b-mini-instruct-4k-fp16',
+      size: '2.3GB',
+      description: 'Microsoft\'s high-performance model with excellent speed'
+    },
     {
       name: 'llama3.2:1b',
       size: '1.3GB',
-      description: 'Fast, efficient model perfect for desktop AI assistant'
+      description: 'Ultra-fast, lightweight model for instant responses'
     },
     {
       name: 'phi3:latest',
@@ -35,9 +45,9 @@ export class ModelManager {
       description: 'High-quality Microsoft model for conversational AI'
     },
     {
-      name: 'gemma2:2b',
-      size: '1.6GB',
-      description: 'Google model optimized for chat applications'
+      name: 'qwen2.5:1.5b',
+      size: '0.9GB',
+      description: 'Alibaba\'s newest fast model for quick interactions'
     }
   ];
 

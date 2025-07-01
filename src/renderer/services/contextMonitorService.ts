@@ -137,23 +137,13 @@ class ContextMonitorService {
     } catch (error) {
       console.error('Failed to get system context:', error);
       
-      // Fallback to mock data if real APIs fail
-      const mockContexts = [
-        {
-          activeApp: 'Cursor',
-          windowTitle: 'TaskMasterService.ts - gauntlet-macos-template',
-          screenshot: null,
-          type: 'ide'
-        },
-        {
-          activeApp: 'Google Chrome',
-          windowTitle: 'GitHub - jfuginay/gauntlet-macos-template',
-          screenshot: null,
-          type: 'github'
-        }
-      ];
-
-      return mockContexts[Math.floor(Math.random() * mockContexts.length)];
+      // Return minimal context when system APIs fail
+      return {
+        activeApp: 'Unknown',
+        windowTitle: 'Context monitoring unavailable',
+        screenshot: null,
+        type: 'other'
+      };
     }
   }
 
