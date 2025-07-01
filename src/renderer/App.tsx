@@ -55,12 +55,14 @@ engie-ai-companion
 
 $ status
 ✅ LangGraph Engine: Active
-✅ Background Processor: 3 workers online
+✅ Background Processor: 3 workers online  
 ✅ Local LLM: llama3.2:1b ready
 ✅ TaskMaster MCP: Connected
 
 $ echo "Welcome to Engie!"
-I'm your AI development companion. Type naturally or use commands.
+I'm your AI development companion. 
+
+Type naturally or use commands.
 I can help with task management, code development, and more.
 
 What would you like to work on today?`;

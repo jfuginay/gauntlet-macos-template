@@ -9,8 +9,14 @@ dev-debug.log
 # Dependency directories
 node_modules/
 
-# Environment variables
+# Build outputs (generated files - exclude from repo)
+dist/
+release/
+
+# Environment variables (sensitive data)
 .env
+.env.local
+.env.production
 
 # Editor directories and files
 .idea
@@ -26,4 +32,17 @@ node_modules/
 
 # Task files
 # tasks.json
-# tasks/ release/
+# tasks/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Temporary folders
+tmp/
+temp/
