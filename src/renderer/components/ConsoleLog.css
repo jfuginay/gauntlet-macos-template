@@ -1,29 +1,31 @@
 /* Console Log Component Styles */
 .console-log-toggle {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  top: 120px;
+  right: 10px;
   background: rgba(20, 20, 20, 0.95);
   border: 1px solid rgba(0, 255, 0, 0.3);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 6px;
+  padding: 6px 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-  font-size: 12px;
+  font-size: 11px;
   color: #00ff00;
   backdrop-filter: blur(10px);
   transition: all 0.2s ease;
-  z-index: 1000;
+  z-index: 100;
+  opacity: 0.8;
 }
 
 .console-log-toggle:hover {
   background: rgba(20, 20, 20, 1);
   border-color: rgba(0, 255, 0, 0.6);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 255, 0, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 255, 0, 0.2);
+  opacity: 1;
 }
 
 .toggle-icon {
@@ -53,10 +55,10 @@
 
 .console-log-container {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 600px;
-  height: 400px;
+  top: 160px;
+  right: 10px;
+  width: 550px;
+  height: 350px;
   background: rgba(15, 15, 15, 0.98);
   border: 1px solid rgba(0, 255, 0, 0.3);
   border-radius: 12px;
@@ -67,15 +69,15 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
-  z-index: 1001;
+  z-index: 101;
   transition: all 0.3s ease;
 }
 
 .console-log-container.expanded {
-  width: 800px;
-  height: 600px;
-  bottom: 50px;
-  right: 50px;
+  width: 700px;
+  height: 500px;
+  top: 100px;
+  right: 20px;
 }
 
 .console-header {

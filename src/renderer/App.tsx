@@ -1019,14 +1019,47 @@ Priority: ${editForm.priority}`;
       <div className="terminal-header">
 
         <div className="terminal-title">
-          <div className="engie-ascii">
-            <div>███████╗███╗   ██╗ ██████╗ ██╗███████╗</div>
-            <div>██╔════╝████╗  ██║██╔════╝ ██║██╔════╝</div>
-            <div>█████╗  ██╔██╗ ██║██║  ███╗██║█████╗  </div>
-            <div>██╔══╝  ██║╚██╗██║██║   ██║██║██╔══╝  </div>
-            <div>███████╗██║ ╚████║╚██████╔╝██║███████╗</div>
+          <div className="engie-logo">
+            <svg width="240" height="60" viewBox="0 0 512 120" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#0ea5e9" />
+                  <stop offset="50%" stopColor="#00ffff" />
+                  <stop offset="100%" stopColor="#06b6d4" />
+                </linearGradient>
+              </defs>
+              
+              {/* ENGIE text */}
+              <text x="256" y="45" fontFamily="monospace" fontSize="32" 
+                    textAnchor="middle" fill="url(#logoGradient)" fontWeight="bold">
+                ENGIE
+              </text>
+              
+              {/* Subtitle */}
+              <text x="256" y="65" fontFamily="monospace" fontSize="10" 
+                    textAnchor="middle" fill="#64748b">
+                Enhanced Neural Gateway for Intelligent Execution
+              </text>
+              
+              {/* Tagline */}
+              <text x="256" y="80" fontFamily="monospace" fontSize="9" 
+                    textAnchor="middle" fill="#00ffff" opacity="0.8">
+                Let go and let Claude
+              </text>
+              
+              {/* Neural circuit accents */}
+              <circle cx="120" cy="40" r="2" fill="#00ffff" opacity="0.6">
+                <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+              </circle>
+              <circle cx="392" cy="40" r="2" fill="#00ffff" opacity="0.6">
+                <animate attributeName="opacity" values="1;0.6;1" dur="2s" repeatCount="indefinite"/>
+              </circle>
+              
+              {/* Connection lines */}
+              <line x1="122" y1="40" x2="150" y2="40" stroke="#00ffff" strokeWidth="1" opacity="0.4"/>
+              <line x1="362" y1="40" x2="390" y2="40" stroke="#00ffff" strokeWidth="1" opacity="0.4"/>
+            </svg>
           </div>
-                          <span className="subtitle">Enhanced Neural Gateway for Intelligent Execution</span>
         </div>
         <div className="system-status">
           <span className={`status-indicator ${systemStatus.langGraph ? 'active' : 'inactive'}`}>LG</span>

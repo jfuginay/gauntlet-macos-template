@@ -43,15 +43,20 @@ body {
 }
 
 .engie-logo {
-  font-size: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  margin: 0;
+  padding: 0;
+}
+
+.engie-logo svg {
+  filter: drop-shadow(0 0 2px rgba(0, 255, 255, 0.3));
+  transition: filter 0.3s ease;
+}
+
+.engie-logo svg:hover {
+  filter: drop-shadow(0 0 4px rgba(0, 255, 255, 0.5));
 }
 
 .title-text h1 {
@@ -553,19 +558,7 @@ body {
   transform: translateX(-50%) translateY(-50%);
 }
 
-.engie-ascii {
-  font-family: 'SF Mono', monospace;
-  font-size: 7px;
-  line-height: 0.9;
-  color: #f0c674;
-  text-shadow: 0 0 2px rgba(240, 199, 116, 0.3);
-  white-space: nowrap;
-}
-
-.engie-ascii div {
-  margin: 0;
-  padding: 0;
-}
+/* Removed .engie-ascii styles - replaced with SVG logo */
 
 .subtitle {
   font-size: 10px;
