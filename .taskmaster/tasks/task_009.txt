@@ -1,0 +1,11 @@
+# Task ID: 9
+# Title: System-wide Text Monitoring (Optional)
+# Status: pending
+# Dependencies: 4 (Not found), 7 (Not found)
+# Priority: low
+# Description: Implement optional background text monitoring across macOS applications with strict privacy controls
+# Details:
+Create an optional feature that can monitor text input across system applications to provide contextual writing assistance. Must include granular permissions, easy disable options, and transparent operation.
+
+# Test Strategy:
+Test across various applications, verify permission controls work correctly, ensure performance impact is minimal, confirm easy opt-out functionality.

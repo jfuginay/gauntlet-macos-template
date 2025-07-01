@@ -1,0 +1,11 @@
+# Task ID: 8
+# Title: Settings & Customization System
+# Status: pending
+# Dependencies: 1 (Not found), 7 (Not found)
+# Priority: medium
+# Description: Create comprehensive settings panel for user preferences, AI behavior customization, and privacy controls
+# Details:
+Design and implement a settings interface that allows users to customize Engie's behavior, choose AI models, set privacy preferences, configure notifications, and personalize the writing assistance experience.
+
+# Test Strategy:
+Test all setting configurations, verify preferences persist correctly, ensure UI is intuitive and accessible.

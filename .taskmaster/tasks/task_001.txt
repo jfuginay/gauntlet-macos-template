@@ -1,0 +1,11 @@
+# Task ID: 1
+# Title: Core Application Architecture Setup
+# Status: done
+# Dependencies: None
+# Priority: high
+# Description: Set up the foundational Electron application structure with React/TypeScript, including main process, renderer process, and IPC communication for Engie AI assistant
+# Details:
+Create the basic Electron app structure with proper TypeScript configuration, React setup, and inter-process communication channels. This includes configuring the main process for native macOS integration and the renderer process for the user interface.
+
+# Test Strategy:
+Verify that the application launches successfully, main and renderer processes communicate properly, and basic React components render correctly.

@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
-    "dev:electron": "wait-on http://localhost:5173 && electron .",
-    "build": "npm run build:vite && npm run build:electron",
+    "dev:electron": "npm run build:main && wait-on http://localhost:5173 && electron .",
+    "build": "npm run build:main && npm run build:vite && npm run build:electron",
+    "build:main": "tsc --project tsconfig.main.json",
     "build:vite": "vite build",
     "build:electron": "electron-builder",
     "test": "vitest",
@@ -54,15 +55,20 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.55.0",
+    "@langchain/core": "^0.3.61",
+    "@langchain/langgraph": "^0.3.5",
+    "@modelcontextprotocol/sdk": "^1.13.2",
     "@types/ws": "^8.18.1",
     "axios": "^1.10.0",
     "clsx": "^2.0.0",
+    "date-fns": "^4.1.0",
     "electron-squirrel-startup": "^1.0.1",
     "lucide-react": "^0.300.0",
     "openai": "^5.8.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwind-merge": "^2.2.0",
+    "uuid": "^11.1.0",
     "ws": "^8.18.3"
   },
   "build": {

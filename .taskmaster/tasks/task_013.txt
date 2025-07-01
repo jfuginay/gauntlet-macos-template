@@ -1,0 +1,11 @@
+# Task ID: 13
+# Title: TaskMaster UI Integration
+# Status: pending
+# Dependencies: 1 (Not found), 3 (Not found)
+# Priority: high
+# Description: Surface TaskMaster functionality directly in Engie UI for seamless task management
+# Details:
+Build task sidebar panel component, live TaskMaster MCP integration, quick task creation from text selection. Integrate existing TaskMaster functionality into the main Engie interface.
+
+# Test Strategy:
+Test task panel UI, verify MCP integration works correctly, ensure task creation from text selection functions, validate live updates from TaskMaster.
