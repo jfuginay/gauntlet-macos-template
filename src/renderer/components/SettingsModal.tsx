@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Key, Save } from 'lucide-react';
+import { X, Key, Save, HardDrive } from 'lucide-react';
 import { aiService } from '../services/aiService';
+import { LocalLLMSettings } from './LocalLLMSettings';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [showApiKey, setShowApiKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [showLocalLLMSettings, setShowLocalLLMSettings] = useState(false);
 
   const handleSave = async () => {
     if (!apiKey.trim()) {
@@ -86,6 +88,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </p>
           </div>
 
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <button
+              onClick={() => setShowLocalLLMSettings(true)}
+              className="w-full flex items-center justify-center px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              <HardDrive className="w-4 h-4 mr-2" />
+              Setup Local LLM (Offline)
+            </button>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+              Run AI models locally for complete privacy and offline use
+            </p>
+          </div>
+
           {saveMessage && (
             <div className={`p-3 rounded-lg text-sm ${
               saveMessage.includes('successfully') 
@@ -120,6 +135,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           </div>
         </div>
       </div>
+      
+      <LocalLLMSettings 
+        isOpen={showLocalLLMSettings}
+        onClose={() => setShowLocalLLMSettings(false)}
+      />
     </div>
   );
 };

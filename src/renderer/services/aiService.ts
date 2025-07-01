@@ -13,11 +13,14 @@ export interface AIResponse {
 class AIService {
   private anthropic: Anthropic | null = null;
   private apiKey: string | null = null;
+  private useLocalLLM: boolean = false;
+  private localLLMModel: string = '';
 
   constructor() {
     // In a real app, this would come from secure storage or environment
     // For MVP, we'll use a placeholder
     this.initializeAI();
+    this.checkLocalLLM();
   }
 
   private async initializeAI() {
@@ -37,7 +40,37 @@ class AIService {
     }
   }
 
+  private async checkLocalLLM() {
+    try {
+      if (window.electronAPI?.localLLM) {
+        const config = await window.electronAPI.localLLM.getConfig();
+        const isRunning = await window.electronAPI.localLLM.isRunning();
+        
+        if (config.enabled && isRunning) {
+          const models = await window.electronAPI.localLLM.listModels();
+          if (models.length > 0) {
+            this.useLocalLLM = true;
+            this.localLLMModel = models[0].name; // Use first available model
+            console.log('Local LLM available:', this.localLLMModel);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Local LLM check failed:', error);
+    }
+  }
+
   async sendMessage(messages: AIMessage[]): Promise<AIResponse> {
+    // Try local LLM first if available
+    if (this.useLocalLLM && this.localLLMModel) {
+      try {
+        return await this.sendLocalLLMMessage(messages);
+      } catch (error) {
+        console.warn('Local LLM failed, falling back to cloud:', error);
+        // Fall through to cloud AI
+      }
+    }
+
     // If no AI service available, use intelligent fallback responses
     if (!this.anthropic || !this.apiKey) {
       return this.generateFallbackResponse(messages);
@@ -213,6 +246,47 @@ Be supportive and constructive. Focus on what's good while offering helpful impr
 
   hasApiKey(): boolean {
     return !!this.apiKey;
+  }
+
+  private async sendLocalLLMMessage(messages: AIMessage[]): Promise<AIResponse> {
+    const systemPrompt = `You are Engie, an AI writing companion and motivational coach. Your core philosophy is: "Difficult isn't bad - it just means the outcome is worth it."
+
+Your personality traits:
+- Encouraging and supportive, especially when users face challenges
+- Insightful about writing and communication
+- Philosophical and wise, helping users reframe difficulties as growth opportunities
+- Practical in offering specific writing improvements
+- Warm and empathetic, understanding the emotional side of writing and creativity
+
+When responding:
+- Always maintain an encouraging tone
+- Provide specific, actionable writing advice when relevant
+- Help users see challenges as valuable rather than obstacles
+- Be concise but meaningful
+- Include gentle motivation tailored to their specific situation`;
+
+    const lastMessage = messages[messages.length - 1];
+    const chatMessages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: lastMessage.content }
+    ];
+
+    const response = await window.electronAPI.localLLM.chat(this.localLLMModel, chatMessages);
+    const type = this.classifyResponseType(response);
+
+    return { content: response, type };
+  }
+
+  public async refreshLocalLLM(): Promise<void> {
+    await this.checkLocalLLM();
+  }
+
+  public isUsingLocalLLM(): boolean {
+    return this.useLocalLLM;
+  }
+
+  public getLocalLLMModel(): string {
+    return this.localLLMModel;
   }
 }
 

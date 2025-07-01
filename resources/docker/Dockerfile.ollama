@@ -1,0 +1,18 @@
+FROM ollama/ollama:latest
+
+# Set environment variables
+ENV OLLAMA_ORIGINS=*
+ENV OLLAMA_HOST=0.0.0.0
+
+# Create models directory
+RUN mkdir -p /models
+
+# Copy startup script
+COPY startup.sh /startup.sh
+RUN chmod +x /startup.sh
+
+# Expose the default Ollama port
+EXPOSE 11434
+
+# Use startup script as entrypoint
+ENTRYPOINT ["/startup.sh"]

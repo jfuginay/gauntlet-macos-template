@@ -1,6 +1,7 @@
 import { app, BrowserWindow, Menu, shell, ipcMain } from 'electron';
 import { join } from 'path';
 import { createMenu } from './menu';
+import { LocalLLMService } from './localLLMService';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -9,8 +10,10 @@ if (require('electron-squirrel-startup')) {
 
 class EngieApp {
   private mainWindow: BrowserWindow | null = null;
+  private localLLMService: LocalLLMService;
 
   constructor() {
+    this.localLLMService = new LocalLLMService();
     this.initializeApp();
   }
 
@@ -114,6 +117,67 @@ class EngieApp {
     // Handle opening external links
     ipcMain.handle('open-external', (_, url: string) => {
       shell.openExternal(url);
+    });
+
+    // Local LLM handlers
+    ipcMain.handle('local-llm-get-config', () => {
+      return this.localLLMService.getConfig();
+    });
+
+    ipcMain.handle('local-llm-update-config', (_, config) => {
+      return this.localLLMService.updateConfig(config);
+    });
+
+    ipcMain.handle('local-llm-check-docker', () => {
+      return this.localLLMService.checkDockerAvailability();
+    });
+
+    ipcMain.handle('local-llm-check-gpu', () => {
+      return this.localLLMService.checkGPUSupport();
+    });
+
+    ipcMain.handle('local-llm-setup-container', () => {
+      return this.localLLMService.setupContainer();
+    });
+
+    ipcMain.handle('local-llm-stop-container', () => {
+      return this.localLLMService.stopContainer();
+    });
+
+    ipcMain.handle('local-llm-is-running', () => {
+      return this.localLLMService.isContainerRunning();
+    });
+
+    ipcMain.handle('local-llm-wait-ready', () => {
+      return this.localLLMService.waitForOllamaReady();
+    });
+
+    ipcMain.handle('local-llm-list-models', () => {
+      return this.localLLMService.listModels();
+    });
+
+    ipcMain.handle('local-llm-pull-model', (_, modelName: string) => {
+      return this.localLLMService.pullModel(modelName);
+    });
+
+    ipcMain.handle('local-llm-remove-model', (_, modelName: string) => {
+      return this.localLLMService.removeModel(modelName);
+    });
+
+    ipcMain.handle('local-llm-generate', (_, model: string, prompt: string) => {
+      return this.localLLMService.generateResponse(model, prompt);
+    });
+
+    ipcMain.handle('local-llm-chat', (_, model: string, messages: Array<{role: string, content: string}>) => {
+      return this.localLLMService.chatCompletion(model, messages);
+    });
+
+    ipcMain.handle('local-llm-ensure-fallback', () => {
+      return this.localLLMService.ensureFallbackModel();
+    });
+
+    ipcMain.handle('local-llm-recommended-models', () => {
+      return this.localLLMService.getRecommendedModels();
     });
   }
 }
