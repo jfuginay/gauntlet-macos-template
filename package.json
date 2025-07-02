@@ -31,6 +31,7 @@
   "author": "Gauntlet AI Participant",
   "license": "MIT",
   "devDependencies": {
+    "@electron/notarize": "^2.5.0",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^20.10.0",
@@ -89,6 +90,10 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "assets/icons/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "target": [
         {
           "target": "dmg",
@@ -98,6 +103,7 @@
           ]
         }
       ]
-    }
+    },
+    "afterSign": "scripts/notarize.js"
   }
 }
