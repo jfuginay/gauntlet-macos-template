@@ -269,11 +269,24 @@
         ],
         "priority": "medium",
         "subtasks": []
+      },
+      {
+        "id": 21,
+        "title": "Shoot Demo Video",
+        "description": "Record a high-quality demo video showcasing the software project's key features and functionality, following the script and setup from the previous tasks.",
+        "details": "1. Review the script and setup instructions from Task 19.\n2. Ensure the development environment is properly configured with the latest version of the software.\n3. Set up professional lighting to enhance video quality.\n4. Use a high-quality microphone for clear audio recording.\n5. Configure screen recording software (e.g., OBS Studio or Camtasia) with optimal settings:\n   - Resolution: 1920x1080 or higher\n   - Frame rate: 60 fps\n   - Audio bitrate: 320 kbps\n6. Conduct a test recording to verify audio and video quality.\n7. Record the demo following the script, ensuring to:\n   - Clearly demonstrate each key feature\n   - Provide concise verbal explanations for each action\n   - Maintain a steady pace throughout the demonstration\n   - Highlight unique selling points and performance aspects\n8. If necessary, record multiple takes of complex sections for the best result.\n9. Save the raw footage in a high-quality format (e.g., .mp4 with H.264 codec).\n10. Organize and label all recorded files for easy identification during editing.\n11. Back up all recorded content to a secure location.",
+        "testStrategy": "1. Review the entire raw footage:\n   - Ensure all key features from the script are covered\n   - Check for clear visibility of all UI elements and actions\n   - Verify audio quality and clarity of explanations\n2. Compare the recorded content against the script to ensure all points are addressed.\n3. Conduct a technical quality check:\n   - Confirm video resolution and frame rate meet the specified requirements\n   - Verify audio levels are consistent and free from distortions or background noise\n4. Have a team member not involved in the recording process watch the footage and provide feedback on clarity and completeness.\n5. Create a checklist of all demonstrated features and mark off each one as it appears in the footage.\n6. Test playback on different devices (computer, tablet, smartphone) to ensure compatibility and quality across platforms.\n7. If any issues are found, identify specific segments that need to be re-recorded and schedule a follow-up session.",
+        "status": "pending",
+        "dependencies": [
+          19
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-06-30T00:00:00.000Z",
-      "updated": "2025-07-02T02:52:10.700Z",
+      "updated": "2025-07-02T02:59:47.921Z",
       "projectName": "Engie - AI Writing Companion",
       "description": "macOS desktop app for AI-powered writing assistance and motivation"
     }
