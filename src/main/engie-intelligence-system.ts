@@ -48,11 +48,25 @@ export class EngieIntelligenceSystem {
   private async loadKnowledgeBase(): Promise<void> {
     try {
       const basePath = path.join(this.knowledgePath, 'base.json');
+      
+      // Try to read existing knowledge base
       const data = await fs.readFile(basePath, 'utf8');
       this.knowledgeBase = JSON.parse(data);
+      console.log('🧠 Knowledge base loaded successfully');
     } catch (error) {
-      console.warn('Knowledge base not found, using empty one...');
+      // Silently create empty knowledge base and save it
+      console.log('🧠 Initializing new knowledge base...');
       this.knowledgeBase = this.createEmptyKnowledgeBase();
+      
+      // Ensure directory exists and save the empty knowledge base
+      try {
+        await fs.mkdir(this.knowledgePath, { recursive: true });
+        await this.saveKnowledgeBase();
+        console.log('✅ Knowledge base initialized successfully');
+      } catch (saveError) {
+        console.warn('⚠️ Could not save initial knowledge base:', saveError);
+        // Continue with in-memory knowledge base
+      }
     }
   }
 

@@ -28,6 +28,9 @@ class EngieOrchestrator {
       console.log('🧠 Engie Orchestrator initialized - AI brain is online');
     } catch (error) {
       console.error('Failed to initialize Engie Orchestrator:', error);
+      // Set as initialized anyway to prevent repeated attempts
+      this.isInitialized = true;
+      throw error;
     }
   }
 
@@ -363,15 +366,22 @@ Would you like help with the installation process or shall we work on something 
   }
 
   private async ensureSystemsReady(): Promise<void> {
-    // Check if local LLM is available
-    if (!window.electronAPI?.localLLM?.query) {
-      throw new Error('Local LLM not available');
+    // Check if electron API is available
+    if (!window.electronAPI) {
+      throw new Error('Electron API not available - app may not be fully loaded');
     }
     
-    // Check if MCP tools are available
-    if (!window.electronAPI?.callMCPTool) {
-      throw new Error('MCP tools not available');
+    // Check if local LLM is available (optional - graceful degradation)
+    if (!window.electronAPI.localLLM?.query) {
+      console.warn('⚠️ Local LLM not available - some AI features may be limited');
     }
+    
+    // Check if MCP tools are available (optional - graceful degradation)
+    if (!window.electronAPI.callMCPTool) {
+      console.warn('⚠️ MCP tools not available - task management features may be limited');
+    }
+    
+    console.log('✅ Core systems ready - Engie can operate');
   }
 
   private async getProjectRoot(): Promise<string> {

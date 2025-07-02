@@ -690,9 +690,14 @@ Priority: ${editForm.priority}`;
       // Restore tabs first
       await restoreTabs();
       
-      // Initialize Engie orchestrator
-      await engieOrchestrator.initialize();
-      console.log('🧠 Engie AI brain initialized');
+      // Initialize Engie orchestrator (non-blocking)
+      try {
+        await engieOrchestrator.initialize();
+        console.log('🧠 Engie AI brain initialized');
+      } catch (error) {
+        console.warn('⚠️ Engie orchestrator initialization failed, continuing without AI features:', error);
+        // Continue app loading even if AI features fail
+      }
       
       // Set up callback for task updates
       engieOrchestrator.setTasksUpdatedCallback(() => {

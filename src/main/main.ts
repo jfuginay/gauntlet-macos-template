@@ -719,17 +719,32 @@ class EngieApp {
     this.setupIntelligenceHandlers();
   }
 
+  private intelligenceSystem: any = null;
+
+  private async getIntelligenceSystem() {
+    if (!this.intelligenceSystem) {
+      try {
+        const { createIntelligenceSystem } = await import('./engie-intelligence-system.js');
+        this.intelligenceSystem = await createIntelligenceSystem();
+        console.log('🧠 Intelligence system initialized once');
+      } catch (error) {
+        console.error('Intelligence system initialization failed:', error);
+        return null;
+      }
+    }
+    return this.intelligenceSystem;
+  }
+
   private setupIntelligenceHandlers(): void {
     // Project utilities
     ipcMain.handle('get-project-root', () => {
       return process.cwd();
     });
 
-    // Intelligence System handlers
+    // Intelligence System handlers with singleton pattern
     ipcMain.handle('intelligence:initialize', async () => {
       try {
-        const { createIntelligenceSystem } = await import('./engie-intelligence-system.js');
-        const intelligence = await createIntelligenceSystem();
+        await this.getIntelligenceSystem();
         return { success: true, data: 'Intelligence system initialized' };
       } catch (error) {
         console.error('Intelligence initialization error:', error);
@@ -739,8 +754,10 @@ class EngieApp {
 
     ipcMain.handle('intelligence:generate-task', async (_, prompt: string) => {
       try {
-        const { createIntelligenceSystem } = await import('./engie-intelligence-system.js');
-        const intelligence = await createIntelligenceSystem();
+        const intelligence = await this.getIntelligenceSystem();
+        if (!intelligence) {
+          return { success: false, error: 'Intelligence system not available' };
+        }
         const task = await intelligence.generateIntelligentTask(prompt);
         return { success: true, data: task };
       } catch (error) {
@@ -751,8 +768,10 @@ class EngieApp {
 
     ipcMain.handle('intelligence:get-insights', async () => {
       try {
-        const { createIntelligenceSystem } = await import('./engie-intelligence-system.js');
-        const intelligence = await createIntelligenceSystem();
+        const intelligence = await this.getIntelligenceSystem();
+        if (!intelligence) {
+          return { success: true, data: { totalPatterns: 0, avgEffectiveness: 0, learningRate: 0, recentActivity: { commits: 0, tasks: 0 }, recommendations: ['Intelligence system initializing...'] } };
+        }
         const insights = await intelligence.getIntelligenceInsights();
         return { success: true, data: insights };
       } catch (error) {
@@ -763,13 +782,15 @@ class EngieApp {
 
     ipcMain.handle('intelligence:generate-commit', async () => {
       try {
-        const { createIntelligenceSystem } = await import('./engie-intelligence-system.js');
-        const intelligence = await createIntelligenceSystem();
-        // For now, return a simple commit message
-        return { success: true, data: 'feat: add intelligent features' };
+        const intelligence = await this.getIntelligenceSystem();
+        if (!intelligence) {
+          return { success: true, data: 'feat: add intelligent features' };
+        }
+        const commitMessage = await intelligence.generateIntelligentCommitMessage();
+        return { success: true, data: commitMessage };
       } catch (error) {
         console.error('Intelligent commit generation error:', error);
-        return { success: false, error: String(error) };
+        return { success: true, data: 'feat: add intelligent features' };
       }
     });
 
