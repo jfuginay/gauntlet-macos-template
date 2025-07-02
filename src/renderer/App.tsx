@@ -413,119 +413,76 @@ What's calling to you today?`;
       setIsLoadingTasks(true);
       console.log('🔄 Fetching real tasks from TaskMaster...');
       
-      // Try direct TaskMaster service call first (better data structure)
-      const taskMasterResult = await taskMasterService.getTasks(true);
-      console.log('🔍 TaskMaster Service Response:', taskMasterResult);
+      // Skip the TaskMaster service call and go directly to file reading
+      console.log('📁 Reading tasks.json directly to avoid MCP complexity...');
       
-      if (taskMasterResult && taskMasterResult.tasks && taskMasterResult.tasks.length > 0) {
-        console.log('✅ Got tasks from TaskMaster service:', taskMasterResult.tasks.length);
-        setRealTasks(taskMasterResult.tasks);
-        setTaskMetrics(taskMasterResult.stats);
-        setHasTaskMasterSetup(true);
-        setIsLoadingTasks(false);
-        return;
-      }
-      
-      // Fallback to MCP call
       const projectRoot = await window.electronAPI.getProjectRoot();
-      const mcpResponse = await window.electronAPI.callMCPTool('mcp_task-master-ai_get_tasks', {
-        projectRoot,
-        withSubtasks: true
-      });
+      console.log('📂 Project root:', projectRoot);
       
-      console.log('🔍 Raw MCP Response:', mcpResponse);
+      // Read the tasks.json file directly for structured data
+      const tasksJsonResponse = await window.electronAPI.readTasksJson(projectRoot);
+      console.log('📋 Raw tasks.json response:', tasksJsonResponse);
       
-      if (mcpResponse.success && mcpResponse.data) {
-        let tasks = [];
-        let stats = {
-          total: 0,
-          completed: 0,
-          inProgress: 0,
-          pending: 0,
-          blocked: 0,
-          deferred: 0,
-          cancelled: 0,
-          review: 0,
-          completionPercentage: 0
-        };
-
-        // Handle different response formats
-        if (mcpResponse.data.isFormattedText) {
-          // TaskMaster returned formatted text - read tasks.json directly
-          console.log('📝 TaskMaster returned formatted text, reading tasks.json directly...');
+      if (tasksJsonResponse.success && tasksJsonResponse.data) {
+        const tasksData = tasksJsonResponse.data;
+        console.log('📊 Parsed tasks data structure:', Object.keys(tasksData));
+        
+        // Extract tasks from the current tag (default: master)
+        const currentTag = tasksData.currentTag || 'master';
+        console.log('🏷️ Using tag:', currentTag);
+        
+        const tagData = tasksData[currentTag] || tasksData.master || {};
+        console.log('📂 Tag data structure:', Object.keys(tagData));
+        
+        if (tagData.tasks && Array.isArray(tagData.tasks)) {
+          const tasks = tagData.tasks;
+          console.log(`📋 Found ${tasks.length} tasks in ${currentTag} tag`);
           
-          try {
-            // Read the tasks.json file directly for structured data
-            const tasksJsonResponse = await window.electronAPI.readTasksJson(projectRoot);
-            
-            if (tasksJsonResponse.success && tasksJsonResponse.data) {
-              const tasksData = tasksJsonResponse.data;
-              
-              // Extract tasks from the current tag (default: master)
-              const currentTag = tasksData.currentTag || 'master';
-              const tagData = tasksData[currentTag] || tasksData.master || {};
-              
-              if (tagData.tasks && Array.isArray(tagData.tasks)) {
-                tasks = tagData.tasks;
-                
-                // Calculate stats from the tasks
-                const total = tasks.length;
-                const completed = tasks.filter((t: any) => t.status === 'done').length;
-                const inProgress = tasks.filter((t: any) => t.status === 'in-progress').length;
-                const pending = tasks.filter((t: any) => t.status === 'pending').length;
-                const blocked = tasks.filter((t: any) => t.status === 'blocked').length;
-                const deferred = tasks.filter((t: any) => t.status === 'deferred').length;
-                const cancelled = tasks.filter((t: any) => t.status === 'cancelled').length;
-                const review = tasks.filter((t: any) => t.status === 'review').length;
-                
-                stats = {
-                  total,
-                  completed,
-                  inProgress,
-                  pending,
-                  blocked,
-                  deferred,
-                  cancelled,
-                  review,
-                  completionPercentage: total > 0 ? Math.round((completed / total) * 100) : 0
-                };
-                
-                console.log(`📋 Loaded ${tasks.length} tasks directly from tasks.json`);
-              } else {
-                console.log('📭 No tasks found in tasks.json');
-                tasks = [];
-              }
-            } else {
-              console.warn('⚠️ Failed to read tasks.json file');
-              tasks = [];
-            }
-          } catch (error) {
-            console.error('❌ Error reading tasks.json:', error);
-            tasks = [];
-          }
+          // Calculate stats from the tasks
+          const total = tasks.length;
+          const completed = tasks.filter((t: any) => t.status === 'done').length;
+          const inProgress = tasks.filter((t: any) => t.status === 'in-progress').length;
+          const pending = tasks.filter((t: any) => t.status === 'pending').length;
+          const blocked = tasks.filter((t: any) => t.status === 'blocked').length;
+          const deferred = tasks.filter((t: any) => t.status === 'deferred').length;
+          const cancelled = tasks.filter((t: any) => t.status === 'cancelled').length;
+          const review = tasks.filter((t: any) => t.status === 'review').length;
+          
+          const stats = {
+            total,
+            completed,
+            inProgress,
+            pending,
+            blocked,
+            deferred,
+            cancelled,
+            review,
+            completionPercentage: total > 0 ? Math.round((completed / total) * 100) : 0
+          };
+          
+          console.log('📊 Calculated stats:', stats);
+          console.log('🎯 About to update state with tasks:', tasks.length, 'and stats:', stats);
+          
+          // Update state
+          setRealTasks(tasks);
+          setTaskMetrics(stats);
+          setHasTaskMasterSetup(true);
+          
+          console.log('✅ State updated successfully!');
         } else {
-          // Handle structured data
-          tasks = mcpResponse.data.tasks || mcpResponse.data || [];
-          stats = mcpResponse.data.stats || stats;
+          console.warn('⚠️ No tasks array found in tag data');
+          setRealTasks([]);
+          setTaskMetrics({
+            total: 0, completed: 0, inProgress: 0, pending: 0,
+            blocked: 0, deferred: 0, cancelled: 0, review: 0,
+            completionPercentage: 0
+          });
         }
-        
-        console.log('📋 Processed tasks:', tasks);
-        console.log('📊 Task stats:', stats);
-        
-        setRealTasks(tasks);
-        setTaskMetrics(stats);
-        setHasTaskMasterSetup(true);
-        
-        if (tasks.length > 0) {
-          console.log(`✅ Loaded ${tasks.length} tasks from TaskMaster`);
-        } else {
-          console.log('📭 No tasks found in TaskMaster');
-        }
-      } else {
-        console.warn('⚠️ No data returned from TaskMaster MCP or call failed');
-        setRealTasks([]);
-        setHasTaskMasterSetup(false);
-      }
+             } else {
+         console.error('❌ Failed to read tasks.json:', tasksJsonResponse.error);
+         setRealTasks([]);
+         setHasTaskMasterSetup(false);
+       }
     } catch (error) {
       console.error('❌ Error fetching real tasks:', error);
       setHasTaskMasterSetup(false);

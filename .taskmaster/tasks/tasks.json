@@ -256,11 +256,24 @@
         "dependencies": [],
         "priority": "medium",
         "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "Create Demo Video",
+        "description": "Produce a high-quality demo video showcasing the software project's key features and functionality, building upon the recorded content from the previous task.",
+        "details": "1. Review the raw footage from Task 19 to ensure all key features are covered.\n2. Import the recorded content into a video editing software (e.g., Adobe Premiere Pro, Final Cut Pro).\n3. Organize the footage into a logical sequence that tells a compelling story about the software.\n4. Add professional transitions between different sections of the demo.\n5. Create and insert title cards and lower thirds to highlight important features or sections.\n6. Enhance the audio quality:\n   - Normalize audio levels\n   - Remove any background noise\n   - Add subtle background music if appropriate\n7. Include text overlays or captions to emphasize key points or provide additional information.\n8. Create an intro and outro sequence, including the software's name and any relevant branding.\n9. Apply color correction and grading to ensure consistent visual quality throughout the video.\n10. Render the final video in high quality (e.g., 1080p or 4K) and appropriate format (e.g., MP4, MOV).\n11. Generate multiple versions optimized for different platforms (e.g., website, social media, presentations).\n12. Create thumbnail images for the video to use on various platforms.",
+        "testStrategy": "1. Conduct a thorough review of the edited video:\n   - Ensure smooth transitions between scenes\n   - Verify audio quality and synchronization\n   - Check that all text overlays and captions are correct and readable\n   - Confirm that the video flow logically demonstrates the software's features\n2. Perform a technical quality check:\n   - Verify video resolution and frame rate meet project standards\n   - Test playback on multiple devices and screen sizes\n   - Ensure file size is optimized for intended distribution channels\n3. Gather feedback from team members not involved in the editing process:\n   - Assess overall impact and effectiveness of the demo\n   - Identify any areas that may need clarification or improvement\n4. Conduct a final review with project stakeholders:\n   - Confirm that all key features are adequately represented\n   - Ensure the video aligns with marketing and branding guidelines\n5. Test upload and playback on target platforms (e.g., website, YouTube, Vimeo):\n   - Verify video quality after platform processing\n   - Check thumbnail visibility and effectiveness\n6. Perform accessibility testing:\n   - Ensure captions or subtitles are accurate and properly synchronized\n   - Verify that the video is compatible with screen readers if applicable\n7. Create a checklist of all identified issues and necessary revisions\n8. After making any required changes, repeat steps 1-6 to ensure all issues have been resolved",
+        "status": "pending",
+        "dependencies": [
+          19
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-06-30T00:00:00.000Z",
-      "updated": "2025-07-02T02:45:27.571Z",
+      "updated": "2025-07-02T02:52:10.700Z",
       "projectName": "Engie - AI Writing Companion",
       "description": "macOS desktop app for AI-powered writing assistance and motivation"
     }
