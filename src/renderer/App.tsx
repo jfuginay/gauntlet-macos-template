@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './App.css';
+import Terminal from './components/Terminal';
 
 interface Message {
   id: number;
@@ -28,6 +29,7 @@ export const App: React.FC = () => {
   const [currentInput, setCurrentInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [mode, setMode] = useState<'normal' | 'insert'>('insert');
+  const [showTerminal, setShowTerminal] = useState(false);
   const [systemStatus, setSystemStatus] = useState<SystemStatus>({
     langGraph: true,
     backgroundProcessor: true,
@@ -291,6 +293,13 @@ What would you like to work on today?`;
           <span className={`status-indicator ${systemStatus.backgroundProcessor ? 'active' : 'inactive'}`}>BP</span>
           <span className={`status-indicator ${systemStatus.localLLM ? 'active' : 'inactive'}`}>AI</span>
           <span className={`status-indicator ${systemStatus.taskMaster ? 'active' : 'inactive'}`}>TM</span>
+          <button 
+            className="terminal-toggle-btn"
+            onClick={() => setShowTerminal(!showTerminal)}
+            title="Open Terminal"
+          >
+            🖥️
+          </button>
         </div>
       </div>
 
@@ -425,6 +434,15 @@ What would you like to work on today?`;
           </div>
         </div>
       </div>
+
+      {/* Terminal Overlay */}
+      {showTerminal && (
+        <div className="terminal-overlay">
+          <div className="terminal-modal">
+            <Terminal onClose={() => setShowTerminal(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

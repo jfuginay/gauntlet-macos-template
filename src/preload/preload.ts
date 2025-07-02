@@ -32,6 +32,23 @@ interface ElectronAPI {
     removeStatusListener: () => void;
   };
   
+  // Terminal APIs
+  terminal: {
+    executeCommand: (command: string, options?: { 
+      cwd?: string; 
+      env?: Record<string, string>; 
+      shell?: boolean 
+    }) => Promise<any>;
+    setupClaudeCLI: () => Promise<any>;
+    configureClaudeCLI: (apiKey: string) => Promise<any>;
+    executeClaudeCommand: (prompt: string, options?: {
+      anthropicApiKey?: string;
+      openaiApiKey?: string;
+      model?: string;
+    }) => Promise<any>;
+    getAvailableApiKeys: () => Promise<any>;
+  };
+  
   // System APIs
   system: {
     getStatus: () => Promise<any>;
@@ -85,6 +102,23 @@ const electronAPI: ElectronAPI = {
     removeStatusListener: () => {
       ipcRenderer.removeAllListeners('llm-status-update');
     },
+  },
+  
+  // Terminal APIs
+  terminal: {
+    executeCommand: (command: string, options?: { 
+      cwd?: string; 
+      env?: Record<string, string>; 
+      shell?: boolean 
+    }) => ipcRenderer.invoke('terminal:execute-command', command, options),
+    setupClaudeCLI: () => ipcRenderer.invoke('terminal:setup-claude-cli'),
+    configureClaudeCLI: (apiKey: string) => ipcRenderer.invoke('terminal:configure-claude-cli', apiKey),
+    executeClaudeCommand: (prompt: string, options?: {
+      anthropicApiKey?: string;
+      openaiApiKey?: string;
+      model?: string;
+    }) => ipcRenderer.invoke('terminal:execute-claude-command', prompt, options),
+    getAvailableApiKeys: () => ipcRenderer.invoke('terminal:get-available-api-keys'),
   },
   
   // System APIs

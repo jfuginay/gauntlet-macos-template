@@ -476,6 +476,218 @@ class EngieApp {
       }
     });
 
+    // Enhanced terminal execution with Claude CLI support
+    ipcMain.handle('terminal:execute-command', async (_, command: string, options: { 
+      cwd?: string; 
+      env?: Record<string, string>; 
+      shell?: boolean 
+    } = {}) => {
+      try {
+        const { stdout, stderr } = await execAsync(command, {
+          cwd: options.cwd || process.cwd(),
+          env: { ...process.env, ...options.env },
+          shell: options.shell !== false,
+          timeout: 30000 // 30 second timeout
+        });
+        
+        return { 
+          success: true, 
+          stdout: stdout || '', 
+          stderr: stderr || '',
+          command 
+        };
+      } catch (error: any) {
+        console.error('Terminal command failed:', error);
+        return { 
+          success: false, 
+          error: error.message || String(error),
+          stdout: error.stdout || '',
+          stderr: error.stderr || '',
+          command
+        };
+      }
+    });
+
+    // Check and install Claude CLI
+    ipcMain.handle('terminal:setup-claude-cli', async () => {
+      try {
+        // First check if Claude CLI is already installed
+        try {
+          const { stdout } = await execAsync('claude --version');
+          return { 
+            success: true, 
+            installed: true, 
+            version: stdout.trim(),
+            message: 'Claude CLI already installed'
+          };
+        } catch (error) {
+          // Not installed, proceed with installation
+        }
+
+        console.log('Installing Claude CLI...');
+        
+        // Install Claude CLI using npm
+        const { stdout: installOutput, stderr: installError } = await execAsync(
+          'npm install -g @anthropic-ai/claude-cli', 
+          { timeout: 120000 } // 2 minute timeout for installation
+        );
+
+        if (installError && !installError.includes('warn')) {
+          throw new Error(`Installation failed: ${installError}`);
+        }
+
+        // Verify installation
+        const { stdout: versionOutput } = await execAsync('claude --version');
+        
+        return { 
+          success: true, 
+          installed: true, 
+          version: versionOutput.trim(),
+          message: 'Claude CLI installed successfully',
+          installOutput: installOutput
+        };
+      } catch (error: any) {
+        console.error('Claude CLI setup failed:', error);
+        return { 
+          success: false, 
+          installed: false, 
+          error: error.message || String(error),
+          message: 'Failed to install Claude CLI'
+        };
+      }
+    });
+
+    // Configure Claude CLI with API key
+    ipcMain.handle('terminal:configure-claude-cli', async (_, apiKey: string) => {
+      try {
+        if (!apiKey) {
+          throw new Error('API key is required');
+        }
+
+        // Set the API key for Claude CLI
+        const { stdout, stderr } = await execAsync(`claude auth --api-key "${apiKey}"`, {
+          timeout: 10000
+        });
+
+        if (stderr && !stderr.includes('Successfully')) {
+          throw new Error(`Configuration failed: ${stderr}`);
+        }
+
+        return { 
+          success: true, 
+          message: 'Claude CLI configured successfully',
+          output: stdout
+        };
+      } catch (error: any) {
+        console.error('Claude CLI configuration failed:', error);
+        return { 
+          success: false, 
+          error: error.message || String(error),
+          message: 'Failed to configure Claude CLI'
+        };
+      }
+    });
+
+    // Execute Claude CLI command with fallback to OpenAI
+    ipcMain.handle('terminal:execute-claude-command', async (_, prompt: string, options: {
+      anthropicApiKey?: string;
+      openaiApiKey?: string;
+      model?: string;
+    } = {}) => {
+      try {
+        // First try Claude CLI if available and configured
+        if (options.anthropicApiKey) {
+          try {
+            const claudeCommand = `claude chat --message "${prompt.replace(/"/g, '\\"')}"`;
+            const { stdout: claudeOutput } = await execAsync(claudeCommand, {
+              env: { ...process.env, ANTHROPIC_API_KEY: options.anthropicApiKey },
+              timeout: 30000
+            });
+
+            return {
+              success: true,
+              response: claudeOutput.trim(),
+              provider: 'claude-cli',
+              model: 'claude-3-haiku'
+            };
+          } catch (claudeError) {
+            console.warn('Claude CLI failed, trying fallback:', claudeError);
+          }
+        }
+
+        // Fallback to OpenAI if available
+        if (options.openaiApiKey) {
+          try {
+            // Use a simple curl command to OpenAI API
+            const openaiCommand = `curl -s -X POST "https://api.openai.com/v1/chat/completions" \\
+              -H "Content-Type: application/json" \\
+              -H "Authorization: Bearer ${options.openaiApiKey}" \\
+              -d '{
+                "model": "${options.model || 'gpt-3.5-turbo'}",
+                "messages": [{"role": "user", "content": "${prompt.replace(/"/g, '\\"')}"}],
+                "max_tokens": 1000
+              }'`;
+
+            const { stdout: openaiOutput } = await execAsync(openaiCommand, {
+              timeout: 30000
+            });
+
+            const response = JSON.parse(openaiOutput);
+            if (response.choices && response.choices[0]) {
+              return {
+                success: true,
+                response: response.choices[0].message.content,
+                provider: 'openai-api',
+                model: options.model || 'gpt-3.5-turbo'
+              };
+            } else {
+              throw new Error('Invalid OpenAI response format');
+            }
+          } catch (openaiError) {
+            console.warn('OpenAI API failed:', openaiError);
+          }
+        }
+
+        // If all else fails, return a helpful message
+        return {
+          success: false,
+          error: 'No valid API keys provided',
+          message: 'Please configure either Anthropic or OpenAI API key to use AI features',
+          fallbackResponse: `I received your message: "${prompt}"\n\nTo provide AI responses, please configure an API key in settings. I can help with:\n- Code analysis and suggestions\n- Task management\n- Development guidance\n- General questions\n\nOnce configured, I'll be able to provide intelligent responses to your queries.`
+        };
+
+      } catch (error: any) {
+        console.error('AI command execution failed:', error);
+        return {
+          success: false,
+          error: error.message || String(error),
+          message: 'Failed to execute AI command'
+        };
+      }
+    });
+
+    // Get available API keys from environment/storage
+    ipcMain.handle('terminal:get-available-api-keys', async () => {
+      try {
+        return {
+          anthropic: !!(process.env.ANTHROPIC_API_KEY || localStorage?.getItem?.('anthropic_api_key')),
+          openai: !!(process.env.OPENAI_API_KEY || localStorage?.getItem?.('openai_api_key')),
+          hasAny: !!(
+            process.env.ANTHROPIC_API_KEY || 
+            process.env.OPENAI_API_KEY || 
+            localStorage?.getItem?.('anthropic_api_key') || 
+            localStorage?.getItem?.('openai_api_key')
+          )
+        };
+      } catch (error) {
+        return {
+          anthropic: !!process.env.ANTHROPIC_API_KEY,
+          openai: !!process.env.OPENAI_API_KEY,
+          hasAny: !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY)
+        };
+      }
+    });
+
     console.log('📡 IPC handlers configured for workflow integration');
   }
 
