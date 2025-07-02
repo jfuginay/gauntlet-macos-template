@@ -69,19 +69,51 @@ class EngieApp {
     initializeApp() {
         // This method will be called when Electron has finished initialization
         electron_1.app.whenReady().then(async () => {
-            await this.createWindow();
-            this.setupApplicationMenu();
-            await this.setupIpcHandlers();
-            this.initializeBackgroundServices().catch(console.error);
-            // Initialize local LLM for always-on conversational mode
-            await this.initializeLocalLLM();
-            electron_1.app.on('activate', async () => {
-                // On macOS it's common to re-create a window in the app when the
-                // dock icon is clicked and there are no other windows open.
-                if (electron_1.BrowserWindow.getAllWindows().length === 0) {
-                    await this.createWindow();
+            try {
+                console.log('🚀 App ready, starting initialization sequence...');
+                console.log('📋 Step 1: Creating window...');
+                await this.createWindow();
+                console.log('✅ Window created successfully');
+                console.log('📋 Step 2: Setting up application menu...');
+                this.setupApplicationMenu();
+                console.log('✅ Application menu set up');
+                console.log('📋 Step 3: Setting up IPC handlers...');
+                await this.setupIpcHandlers();
+                console.log('✅ IPC handlers set up');
+                console.log('📋 Step 4: Initializing background services...');
+                this.initializeBackgroundServices().catch(console.error);
+                console.log('✅ Background services started');
+                console.log('📋 Step 5: Initializing local LLM...');
+                // Initialize local LLM for always-on conversational mode
+                await this.initializeLocalLLM();
+                console.log('✅ Local LLM initialized');
+                console.log('🎉 All initialization steps completed successfully!');
+                electron_1.app.on('activate', async () => {
+                    // On macOS it's common to re-create a window in the app when the
+                    // dock icon is clicked and there are no other windows open.
+                    if (electron_1.BrowserWindow.getAllWindows().length === 0) {
+                        console.log('🔄 Recreating window on activate...');
+                        await this.createWindow();
+                    }
+                });
+            }
+            catch (error) {
+                console.error('🚨 CRITICAL ERROR during app initialization:', error);
+                console.error('🚨 Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+                // Try to show an error dialog if possible
+                try {
+                    const { dialog } = require('electron');
+                    dialog.showErrorBox('ENGIE Initialization Error', `Failed to initialize ENGIE: ${error instanceof Error ? error.message : String(error)}\n\nPlease check the console for more details.`);
                 }
-            });
+                catch (dialogError) {
+                    console.error('Could not show error dialog:', dialogError);
+                }
+                // Exit gracefully
+                electron_1.app.quit();
+            }
+        }).catch(error => {
+            console.error('🚨 CRITICAL ERROR: App whenReady failed:', error);
+            electron_1.app.quit();
         });
         // Quit when all windows are closed, except on macOS
         electron_1.app.on('window-all-closed', () => {
@@ -167,6 +199,33 @@ class EngieApp {
         this.mainWindow.once('ready-to-show', () => {
             log_collector_1.logCollector.logSystem('info', '✅ Main window ready and visible');
             this.mainWindow?.show();
+        });
+        // Force show window after timeout if ready-to-show doesn't fire
+        setTimeout(() => {
+            if (this.mainWindow && !this.mainWindow.isVisible()) {
+                console.log('🚨 Window not visible after 5 seconds, forcing show...');
+                this.mainWindow.show();
+            }
+        }, 5000);
+        // Handle renderer process crashes
+        this.mainWindow.webContents.on('crashed', (event, killed) => {
+            console.error('🚨 Renderer process crashed:', { killed });
+            log_collector_1.logCollector.logSystem('error', 'Renderer process crashed', { killed });
+        });
+        // Handle unresponsive renderer
+        this.mainWindow.webContents.on('unresponsive', () => {
+            console.error('🚨 Renderer process became unresponsive');
+            log_collector_1.logCollector.logSystem('error', 'Renderer process unresponsive');
+        });
+        // Handle renderer errors
+        this.mainWindow.webContents.on('render-process-gone', (event, details) => {
+            console.error('🚨 Render process gone:', details);
+            log_collector_1.logCollector.logSystem('error', 'Render process gone', details);
+        });
+        // Handle navigation errors
+        this.mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+            console.error('🚨 Failed to load:', { errorCode, errorDescription, validatedURL });
+            log_collector_1.logCollector.logSystem('error', 'Failed to load page', { errorCode, errorDescription, validatedURL });
         });
         // Handle window closed
         this.mainWindow.on('closed', () => {
