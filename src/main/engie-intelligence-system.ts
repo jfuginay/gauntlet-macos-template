@@ -42,7 +42,15 @@ export class EngieIntelligenceSystem {
   }
 
   async initialize(): Promise<void> {
-    await this.loadKnowledgeBase();
+    try {
+      await this.loadKnowledgeBase();
+      console.log('🧠 Intelligence system ready');
+    } catch (error) {
+      console.error('🚨 Intelligence system initialization error:', error);
+      // Initialize with empty knowledge base and continue
+      this.knowledgeBase = this.createEmptyKnowledgeBase();
+      console.log('⚠️ Using fallback empty knowledge base');
+    }
   }
 
   private async loadKnowledgeBase(): Promise<void> {
@@ -94,11 +102,22 @@ export class EngieIntelligenceSystem {
    */
   async analyzeCommit(): Promise<void> {
     try {
+      // Check if we're in a git repository first
+      try {
+        await execAsync('git rev-parse --git-dir');
+      } catch {
+        console.log('📝 Not in a git repository, skipping commit analysis');
+        return;
+      }
+
       const { stdout: diff } = await execAsync('git diff --cached');
       const { stdout: branch } = await execAsync('git branch --show-current');
       const { stdout: files } = await execAsync('git diff --cached --name-only');
       
-      if (!diff.trim()) return;
+      if (!diff.trim()) {
+        console.log('📝 No staged changes, skipping commit analysis');
+        return;
+      }
 
       const commitContext = {
         branch: branch.trim(),
@@ -114,7 +133,7 @@ export class EngieIntelligenceSystem {
       await this.saveKnowledgeBase();
       console.log(`🧠 Analyzed commit: ${patterns.length} patterns learned`);
     } catch (error) {
-      console.error('Error analyzing commit:', error);
+      console.warn('⚠️ Commit analysis failed (continuing normally):', error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -169,8 +188,21 @@ export class EngieIntelligenceSystem {
    */
   async updateKnowledgeFromCommit(): Promise<void> {
     try {
+      // Check if we're in a git repository first
+      try {
+        await execAsync('git rev-parse --git-dir');
+      } catch {
+        console.log('📝 Not in a git repository, skipping knowledge update');
+        return;
+      }
+
       const { stdout: lastCommit } = await execAsync('git log -1 --pretty=format:"%H|%s"');
       const [hash, message] = lastCommit.split('|');
+      
+      if (!hash || !message) {
+        console.log('📝 No commit found, skipping knowledge update');
+        return;
+      }
       
       const messageQuality = this.analyzeCommitMessageQuality(message);
       
@@ -189,7 +221,7 @@ export class EngieIntelligenceSystem {
       await this.saveKnowledgeBase();
       console.log(`🧠 Updated knowledge from commit: ${hash.substring(0, 8)}`);
     } catch (error) {
-      console.error('Error updating knowledge:', error);
+      console.warn('⚠️ Knowledge update failed (continuing normally):', error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -220,6 +252,13 @@ export class EngieIntelligenceSystem {
    */
   async generateIntelligentCommitMessage(): Promise<string> {
     try {
+      // Check if we're in a git repository first
+      try {
+        await execAsync('git rev-parse --git-dir');
+      } catch {
+        return 'feat: add improvements';
+      }
+
       const { stdout: diff } = await execAsync('git diff --cached');
       const { stdout: files } = await execAsync('git diff --cached --name-only');
       
@@ -242,8 +281,8 @@ export class EngieIntelligenceSystem {
       
       return `${commitType}(${scope}): ${description}`;
     } catch (error) {
-      console.error('Error generating commit message:', error);
-      return 'chore: update files';
+      console.warn('⚠️ Commit message generation failed:', error instanceof Error ? error.message : String(error));
+      return 'feat: add improvements';
     }
   }
 

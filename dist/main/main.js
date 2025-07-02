@@ -780,16 +780,44 @@ class EngieApp {
     async getIntelligenceSystem() {
         if (!this.intelligenceSystem) {
             try {
+                console.log('🧠 Initializing intelligence system...');
                 const { createIntelligenceSystem } = await Promise.resolve().then(() => __importStar(require('./engie-intelligence-system.js')));
-                this.intelligenceSystem = await createIntelligenceSystem();
-                console.log('🧠 Intelligence system initialized once');
+                // Add timeout to prevent hanging
+                const initPromise = createIntelligenceSystem();
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Intelligence system initialization timeout')), 10000);
+                });
+                this.intelligenceSystem = await Promise.race([initPromise, timeoutPromise]);
+                console.log('🧠 Intelligence system initialized successfully');
             }
             catch (error) {
-                console.error('Intelligence system initialization failed:', error);
-                return null;
+                console.error('🚨 Intelligence system initialization failed:', error);
+                console.log('⚠️ Continuing without intelligence features...');
+                // Return a mock system that won't crash
+                this.intelligenceSystem = this.createMockIntelligenceSystem();
             }
         }
         return this.intelligenceSystem;
+    }
+    createMockIntelligenceSystem() {
+        return {
+            generateIntelligentTask: async (prompt) => ({
+                title: prompt.charAt(0).toUpperCase() + prompt.slice(1),
+                description: `Implement ${prompt}`,
+                priority: 'medium',
+                estimatedEffort: '1-2 days'
+            }),
+            getIntelligenceInsights: async () => ({
+                totalPatterns: 0,
+                avgEffectiveness: 0,
+                learningRate: 0,
+                recentActivity: { commits: 0, tasks: 0 },
+                recommendations: ['Intelligence system temporarily unavailable']
+            }),
+            generateIntelligentCommitMessage: async () => 'feat: add improvements',
+            analyzeCommit: async () => Promise.resolve(),
+            updateKnowledgeFromCommit: async () => Promise.resolve()
+        };
     }
     setupIntelligenceHandlers() {
         // Project utilities
