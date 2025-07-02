@@ -58,6 +58,7 @@ const electronAPI = {
     callMCPTool: (toolName, parameters) => electron_1.ipcRenderer.invoke('taskmaster:call-mcp-tool', toolName, parameters),
     executeTaskMasterCommand: (command) => electron_1.ipcRenderer.invoke('execute-taskmaster-command', command),
     getProjectRoot: () => electron_1.ipcRenderer.invoke('get-project-root'),
+    readTasksJson: (projectRoot) => electron_1.ipcRenderer.invoke('read-tasks-json', projectRoot),
     // TaskMaster High-Level APIs
     taskMaster: {
         addTask: (params) => electron_1.ipcRenderer.invoke('taskmaster:call-mcp-tool', 'mcp_task-master-ai_add_task', params),

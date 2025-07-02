@@ -127,24 +127,38 @@ class TaskMasterService {
       });
 
       if (response.success && response.data) {
-        const { tasks, stats } = response.data;
+        // Handle different response formats from TaskMaster CLI
+        let tasks: TaskMasterTask[] = [];
+        let stats: TaskMasterStats = this.getEmptyStats();
+
+        // Check if response has structured data
+        if (response.data.tasks && Array.isArray(response.data.tasks)) {
+          tasks = response.data.tasks.map((task: any) => this.formatTask(task));
+          stats = response.data.stats || this.getEmptyStats();
+        } 
+        // Handle formatted text response from CLI
+        else if (response.data.isFormattedText || typeof response.data === 'string') {
+          console.log('📝 Parsing formatted TaskMaster CLI output...');
+          // For now, return empty array - the App.tsx will handle the MCP call directly
+          // and has more sophisticated parsing logic
+          return { tasks: [], stats: this.getEmptyStats() };
+        }
+        // Handle direct array of tasks
+        else if (Array.isArray(response.data)) {
+          tasks = response.data.map((task: any) => this.formatTask(task));
+        }
+        // Handle single task object
+        else if (response.data.id) {
+          tasks = [this.formatTask(response.data)];
+        }
         
-        console.log(`✅ Loaded ${tasks.length} tasks from TaskMaster`);
+        // Calculate stats if not provided
+        if (tasks.length > 0 && (!stats || stats.total === 0)) {
+          stats = this.calculateStatsFromTasks(tasks);
+        }
         
-        return {
-          tasks: tasks || [],
-          stats: stats || {
-            total: 0,
-            completed: 0,
-            inProgress: 0,
-            pending: 0,
-            blocked: 0,
-            deferred: 0,
-            cancelled: 0,
-            review: 0,
-            completionPercentage: 0
-          }
-        };
+        console.log(`✅ Loaded ${tasks.length} tasks from TaskMaster MCP`);
+        return { tasks, stats };
       } else {
         console.warn('⚠️ No tasks returned from TaskMaster MCP');
         return { tasks: [], stats: this.getEmptyStats() };
@@ -474,6 +488,29 @@ class TaskMasterService {
       cancelled: 0,
       review: 0,
       completionPercentage: 0
+    };
+  }
+
+  private calculateStatsFromTasks(tasks: TaskMasterTask[]): TaskMasterStats {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.status === 'done').length;
+    const inProgress = tasks.filter(t => t.status === 'in-progress').length;
+    const pending = tasks.filter(t => t.status === 'pending').length;
+    const blocked = tasks.filter(t => t.status === 'blocked').length;
+    const deferred = tasks.filter(t => t.status === 'deferred').length;
+    const cancelled = tasks.filter(t => t.status === 'cancelled').length;
+    const review = tasks.filter(t => t.status === 'review').length;
+    
+    return {
+      total,
+      completed,
+      inProgress,
+      pending,
+      blocked,
+      deferred,
+      cancelled,
+      review,
+      completionPercentage: total > 0 ? Math.round((completed / total) * 100) : 0
     };
   }
 

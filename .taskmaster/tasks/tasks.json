@@ -245,11 +245,22 @@
           "17"
         ],
         "subtasks": []
+      },
+      {
+        "id": 19,
+        "title": "Record Demo Video",
+        "description": "Create a comprehensive demo video showcasing the key features and functionality of the software project.",
+        "details": "1. Prepare a script outlining the main features to be demonstrated.\n2. Set up a clean development environment with the latest version of the software.\n3. Configure screen recording software (e.g., OBS Studio or Camtasia) for optimal video and audio quality.\n4. Record a walkthrough of the software, highlighting:\n   - User interface and navigation\n   - Core functionality\n   - Unique selling points\n   - Performance and responsiveness\n5. Include voice-over explanation for each feature demonstrated.\n6. Showcase any integrations or compatibility with other systems.\n7. Demonstrate error handling and edge cases if relevant.\n8. Record multiple takes if necessary to ensure a smooth, professional presentation.\n9. Edit the video to add transitions, captions, and annotations as needed.\n10. Add an intro and outro, including any necessary disclaimers or calls to action.\n11. Export the video in high quality (1080p or 4K) and in a widely compatible format (e.g., MP4).\n12. Review the final cut and make any necessary adjustments before finalizing.",
+        "testStrategy": "1. Conduct an internal review:\n   - Check video quality (resolution, frame rate, audio clarity)\n   - Verify all key features are demonstrated correctly\n   - Ensure voice-over is clear and synchronized with on-screen actions\n   - Confirm accuracy of any text overlays or captions\n2. Share the video with the development team for technical accuracy review.\n3. Present the video to a focus group of potential users or stakeholders:\n   - Gather feedback on clarity and effectiveness of the demonstration\n   - Assess whether the video accurately represents the software's capabilities\n4. Verify compatibility:\n   - Test playback on multiple devices (desktop, mobile, tablet)\n   - Check video performance on different browsers and platforms\n5. Conduct A/B testing if multiple versions are created:\n   - Compare engagement metrics (watch time, click-through rates)\n   - Analyze feedback on different styles or approaches\n6. Ensure the video meets any legal or compliance requirements (e.g., accessibility standards).\n7. Verify that the video file size and format are appropriate for intended distribution channels.\n8. Conduct a final review with project managers and key stakeholders for approval before public release.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-06-30T00:00:00.000Z",
-      "updated": "2025-06-30T20:30:00.000Z",
+      "updated": "2025-07-02T02:45:27.571Z",
       "projectName": "Engie - AI Writing Companion",
       "description": "macOS desktop app for AI-powered writing assistance and motivation"
     }

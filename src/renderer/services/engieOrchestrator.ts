@@ -130,7 +130,7 @@ Be intelligent and proactive. If the user wants task help, suggest specific MCP 
       };
     }
     
-    if (lowerInput.includes('list tasks') || lowerInput.includes('show tasks') || lowerInput.includes('my tasks')) {
+    if (lowerInput.includes('list tasks') || lowerInput.includes('show tasks') || lowerInput.includes('my tasks') || lowerInput.includes('how many tasks')) {
       return {
         type: 'task_management',
         confidence: 0.9,
@@ -230,6 +230,12 @@ Be intelligent and proactive. If the user wants task help, suggest specific MCP 
   }
 
   private async synthesizeResponse(input: string, intent: UserIntent, toolResults: any[]): Promise<EngieResponse> {
+    // For task management requests, use fallback immediately to avoid hanging
+    if (intent.type === 'task_management' && toolResults.length > 0) {
+      console.log('🚀 Using fallback synthesis for task management to avoid hanging');
+      return this.fallbackResponseSynthesis(input, intent, toolResults);
+    }
+
     // Build context from tool results
     let toolContext = '';
     const toolsUsed: string[] = [];
@@ -259,7 +265,13 @@ Provide a natural, helpful response that:
 Be conversational, intelligent, and proactive. Show that I'm an AI that understands context and can help with development work.`;
 
     try {
-      const llmResponse = await window.electronAPI.localLLM.query(synthesisPrompt);
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<any>((_, reject) => 
+        setTimeout(() => reject(new Error('LLM synthesis timeout')), 10000)
+      );
+      
+      const llmPromise = window.electronAPI.localLLM.query(synthesisPrompt);
+      const llmResponse = await Promise.race([llmPromise, timeoutPromise]) as any;
       
       if (llmResponse.success && llmResponse.data) {
         let responseText = llmResponse.data;
@@ -275,7 +287,7 @@ Be conversational, intelligent, and proactive. Show that I'm an AI that understa
         };
       }
     } catch (error) {
-      console.error('Response synthesis failed:', error);
+      console.error('Response synthesis failed or timed out:', error);
     }
 
     // Fallback response synthesis
@@ -337,8 +349,47 @@ Would you like help with the installation process or shall we work on something 
               result: `📋 **Here are your current tasks:**\n\n${toolResult.data}\n\n💡 I can help you with any of these tasks - just ask about a specific task ID or what you should work on next!`,
               toolsUsed
             };
-          } else if (Array.isArray(toolResult.data)) {
-            result = `📋 I found ${toolResult.data.length} tasks in your project. Here's your current workload overview with intelligent prioritization.`;
+          } else if (toolResult.data?.tasks && Array.isArray(toolResult.data.tasks)) {
+            const tasks = toolResult.data.tasks;
+            const stats = toolResult.data.stats || { total: tasks.length, completed: 0, inProgress: 0, pending: 0, blocked: 0 };
+            
+            // Calculate stats if not provided
+            if (!toolResult.data.stats) {
+              stats.completed = tasks.filter((t: any) => t.status === 'done').length;
+              stats.inProgress = tasks.filter((t: any) => t.status === 'in-progress').length;
+              stats.pending = tasks.filter((t: any) => t.status === 'pending').length;
+              stats.blocked = tasks.filter((t: any) => t.status === 'blocked').length;
+            }
+            
+            let taskList = '';
+            const maxTasksToShow = intent.action === 'list_tasks' ? 10 : 5; // Show more for explicit list requests
+            
+            tasks.slice(0, maxTasksToShow).forEach((task: any, index: number) => {
+              const statusIcon = task.status === 'done' ? '✅' : 
+                                task.status === 'in-progress' ? '🔄' : 
+                                task.status === 'blocked' ? '🚫' : '⏳';
+              taskList += `${statusIcon} **${task.id}** - ${task.title} (${task.status})\n`;
+              
+              // Show description for first few tasks or if explicitly listing
+              if (index < 5 || intent.action === 'list_tasks') {
+                const desc = task.description || 'No description available';
+                const shortDesc = desc.length > 100 ? desc.substring(0, 100) + '...' : desc;
+                taskList += `   ${shortDesc}\n\n`;
+              }
+            });
+            
+            if (tasks.length > maxTasksToShow) {
+              taskList += `... and ${tasks.length - maxTasksToShow} more tasks\n\n`;
+            }
+            
+            result = `📋 **Task Overview** - You have ${stats.total} total tasks:
+• ${stats.completed} completed
+• ${stats.inProgress} in progress  
+• ${stats.pending} pending
+• ${stats.blocked} blocked
+
+**Current Tasks:**
+${taskList}💡 Ask me about specific task IDs or say "next task" to see what to work on!`;
           } else if (toolResult.data?.id) {
             result = `🎯 Here's your next recommended task based on dependencies and priority analysis: ${toolResult.data.title || 'Task details available'}.`;
           }

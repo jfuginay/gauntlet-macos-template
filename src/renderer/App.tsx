@@ -413,7 +413,20 @@ What's calling to you today?`;
       setIsLoadingTasks(true);
       console.log('🔄 Fetching real tasks from TaskMaster...');
       
-      // Direct MCP call to get raw response for debugging
+      // Try direct TaskMaster service call first (better data structure)
+      const taskMasterResult = await taskMasterService.getTasks(true);
+      console.log('🔍 TaskMaster Service Response:', taskMasterResult);
+      
+      if (taskMasterResult && taskMasterResult.tasks && taskMasterResult.tasks.length > 0) {
+        console.log('✅ Got tasks from TaskMaster service:', taskMasterResult.tasks.length);
+        setRealTasks(taskMasterResult.tasks);
+        setTaskMetrics(taskMasterResult.stats);
+        setHasTaskMasterSetup(true);
+        setIsLoadingTasks(false);
+        return;
+      }
+      
+      // Fallback to MCP call
       const projectRoot = await window.electronAPI.getProjectRoot();
       const mcpResponse = await window.electronAPI.callMCPTool('mcp_task-master-ai_get_tasks', {
         projectRoot,
@@ -438,53 +451,57 @@ What's calling to you today?`;
 
         // Handle different response formats
         if (mcpResponse.data.isFormattedText) {
-          // TaskMaster returned formatted text - we need to parse it or request structured data
-          console.log('📝 TaskMaster returned formatted text, requesting structured data...');
+          // TaskMaster returned formatted text - read tasks.json directly
+          console.log('📝 TaskMaster returned formatted text, reading tasks.json directly...');
           
-          // Try to get tasks in JSON format
-          const structuredResponse = await window.electronAPI.callMCPTool('mcp_task-master-ai_get_tasks', {
-            projectRoot,
-            withSubtasks: true,
-            format: 'json' // Request JSON format
-          });
-          
-          if (structuredResponse.success && structuredResponse.data && !structuredResponse.data.isFormattedText) {
-            tasks = structuredResponse.data.tasks || structuredResponse.data || [];
-            stats = structuredResponse.data.stats || stats;
-          } else {
-            // Fallback: Create dummy tasks to test the display
-            console.log('🔄 Creating example tasks to test display...');
-            tasks = [
-              {
-                id: '1',
-                title: 'Sample Task from TaskMaster',
-                description: 'This is a test task to verify the sidebar display',
-                status: 'pending',
-                priority: 'high',
-                dependencies: [],
-                subtasks: []
-              },
-              {
-                id: '2', 
-                title: 'Text Analysis Engine (10.2)',
-                description: 'The task ENGIE mentioned in the chat',
-                status: 'in-progress',
-                priority: 'medium',
-                dependencies: [],
-                subtasks: []
+          try {
+            // Read the tasks.json file directly for structured data
+            const tasksJsonResponse = await window.electronAPI.readTasksJson(projectRoot);
+            
+            if (tasksJsonResponse.success && tasksJsonResponse.data) {
+              const tasksData = tasksJsonResponse.data;
+              
+              // Extract tasks from the current tag (default: master)
+              const currentTag = tasksData.currentTag || 'master';
+              const tagData = tasksData[currentTag] || tasksData.master || {};
+              
+              if (tagData.tasks && Array.isArray(tagData.tasks)) {
+                tasks = tagData.tasks;
+                
+                // Calculate stats from the tasks
+                const total = tasks.length;
+                const completed = tasks.filter((t: any) => t.status === 'done').length;
+                const inProgress = tasks.filter((t: any) => t.status === 'in-progress').length;
+                const pending = tasks.filter((t: any) => t.status === 'pending').length;
+                const blocked = tasks.filter((t: any) => t.status === 'blocked').length;
+                const deferred = tasks.filter((t: any) => t.status === 'deferred').length;
+                const cancelled = tasks.filter((t: any) => t.status === 'cancelled').length;
+                const review = tasks.filter((t: any) => t.status === 'review').length;
+                
+                stats = {
+                  total,
+                  completed,
+                  inProgress,
+                  pending,
+                  blocked,
+                  deferred,
+                  cancelled,
+                  review,
+                  completionPercentage: total > 0 ? Math.round((completed / total) * 100) : 0
+                };
+                
+                console.log(`📋 Loaded ${tasks.length} tasks directly from tasks.json`);
+              } else {
+                console.log('📭 No tasks found in tasks.json');
+                tasks = [];
               }
-            ];
-            stats = {
-              total: tasks.length,
-              completed: 0,
-              inProgress: 1,
-              pending: 1,
-              blocked: 0,
-              deferred: 0,
-              cancelled: 0,
-              review: 0,
-              completionPercentage: 0
-            };
+            } else {
+              console.warn('⚠️ Failed to read tasks.json file');
+              tasks = [];
+            }
+          } catch (error) {
+            console.error('❌ Error reading tasks.json:', error);
+            tasks = [];
           }
         } else {
           // Handle structured data

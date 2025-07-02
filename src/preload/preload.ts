@@ -50,6 +50,7 @@ interface ElectronAPI {
   callMCPTool: (toolName: string, parameters: any) => Promise<any>;
   executeTaskMasterCommand: (command: string) => Promise<any>;
   getProjectRoot: () => Promise<string>;
+  readTasksJson: (projectRoot: string) => Promise<any>;
   
   // TaskMaster High-Level APIs
   taskMaster: {
@@ -166,6 +167,7 @@ const electronAPI: ElectronAPI = {
   executeTaskMasterCommand: (command: string) => 
     ipcRenderer.invoke('execute-taskmaster-command', command),
   getProjectRoot: () => ipcRenderer.invoke('get-project-root'),
+  readTasksJson: (projectRoot: string) => ipcRenderer.invoke('read-tasks-json', projectRoot),
   
   // TaskMaster High-Level APIs
   taskMaster: {

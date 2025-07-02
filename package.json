@@ -5,8 +5,10 @@
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:fast": "SKIP_AI_INIT=true concurrently \"npm run dev:vite\" \"npm run dev:electron:fast\"",
     "dev:vite": "vite",
-    "dev:electron": "npm run build:main && wait-on http://localhost:5173 && electron .",
+    "dev:electron": "npm run build:main && wait-on -t 300000 http://localhost:5173 && electron .",
+    "dev:electron:fast": "npm run build:main && wait-on http://localhost:5173 && SKIP_AI_INIT=true electron .",
     "build": "npm run build:main && npm run build:vite && npm run build:electron",
     "build:main": "tsc --project tsconfig.main.json",
     "build:vite": "vite build",

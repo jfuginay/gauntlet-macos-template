@@ -808,6 +808,23 @@ class EngieApp {
       return process.cwd();
     });
 
+    // Read tasks.json file directly for structured data
+    ipcMain.handle('read-tasks-json', async (_, projectRoot: string) => {
+      try {
+        const fs = require('fs').promises;
+        const path = require('path');
+        const tasksJsonPath = path.join(projectRoot, '.taskmaster/tasks/tasks.json');
+        
+        const tasksJsonContent = await fs.readFile(tasksJsonPath, 'utf8');
+        const tasksData = JSON.parse(tasksJsonContent);
+        
+        return { success: true, data: tasksData };
+      } catch (error) {
+        console.error('Failed to read tasks.json:', error);
+        return { success: false, error: String(error) };
+      }
+    });
+
     // Intelligence System handlers with singleton pattern
     ipcMain.handle('intelligence:initialize', async () => {
       try {

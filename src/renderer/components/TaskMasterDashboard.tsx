@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Circle, CheckCircle, Clock, Wifi, WifiOff, AlertCircle } from 'lucide-react';
-import { taskMasterService, Task } from '../services/taskMasterService';
+import { taskMasterService, TaskMasterTask } from '../services/taskMasterService';
 
 export const TaskMasterDashboard: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<TaskMasterTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -20,8 +20,8 @@ export const TaskMasterDashboard: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const fetchedTasks = await taskMasterService.getTasks();
-      setTasks(fetchedTasks);
+      const response = await taskMasterService.getTasks();
+      setTasks(response.tasks);
     } catch (err) {
       setError('Failed to load tasks');
       console.error('Error loading tasks:', err);
@@ -43,13 +43,13 @@ export const TaskMasterDashboard: React.FC = () => {
     if (!newTaskTitle.trim()) return;
 
     try {
-      const result = await taskMasterService.createTask(newTaskTitle, isOnline);
-      if (result.success) {
+      const success = await taskMasterService.createTask(newTaskTitle, '', 'medium');
+      if (success) {
         setNewTaskTitle('');
         setShowAddTask(false);
         await loadTasks(); // Refresh the task list
       } else {
-        setError(`Failed to create task: ${result.error}`);
+        setError('Failed to create task');
       }
     } catch (err) {
       setError('Failed to create task');
@@ -61,17 +61,17 @@ export const TaskMasterDashboard: React.FC = () => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    let newStatus: Task['status'];
+    let newStatus: TaskMasterTask['status'];
     if (task.status === 'pending') newStatus = 'in-progress';
     else if (task.status === 'in-progress') newStatus = 'done';
     else newStatus = 'pending';
 
     try {
-      const result = await taskMasterService.updateTaskStatus(taskId, newStatus);
-      if (result.success) {
+      const success = await taskMasterService.updateTaskStatus(taskId, newStatus);
+      if (success) {
         await loadTasks(); // Refresh the task list
       } else {
-        setError(`Failed to update task: ${result.error}`);
+        setError('Failed to update task');
       }
     } catch (err) {
       setError('Failed to update task');
@@ -79,7 +79,7 @@ export const TaskMasterDashboard: React.FC = () => {
     }
   };
 
-  const getStatusIcon = (status: Task['status']) => {
+  const getStatusIcon = (status: TaskMasterTask['status']) => {
     switch (status) {
       case 'pending':
         return <Circle className="w-5 h-5 text-gray-400" />;
