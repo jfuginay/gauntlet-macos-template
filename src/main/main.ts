@@ -23,6 +23,7 @@ if (require('electron-squirrel-startup')) {
 class EngieApp {
   private mainWindow: BrowserWindow | null = null;
   private workflowEngine!: WorkflowEngine;
+  private intelligenceSystem: any = null;
 
   constructor() {
     this.initializeApp();
@@ -39,68 +40,57 @@ class EngieApp {
   }
 
   private initializeApp(): void {
-    // This method will be called when Electron has finished initialization
-    app.whenReady().then(async () => {
-      try {
-        console.log('🚀 App ready, starting initialization sequence...');
-        
-        console.log('📋 Step 1: Creating window...');
-        await this.createWindow();
-        console.log('✅ Window created successfully');
-        
-        console.log('📋 Step 2: Setting up application menu...');
-        this.setupApplicationMenu();
-        console.log('✅ Application menu set up');
-        
-        console.log('📋 Step 3: Setting up IPC handlers...');
-        await this.setupIpcHandlers();
-        console.log('✅ IPC handlers set up');
-        
-        console.log('📋 Step 4: Initializing background services...');
-        this.initializeBackgroundServices().catch(console.error);
-        console.log('✅ Background services started');
-
-        console.log('📋 Step 5: Initializing local LLM...');
-        // Initialize local LLM for always-on conversational mode
-        await this.initializeLocalLLM();
-        console.log('✅ Local LLM initialized');
-        
-        console.log('🎉 All initialization steps completed successfully!');
-
-        app.on('activate', async () => {
-          // On macOS it's common to re-create a window in the app when the
-          // dock icon is clicked and there are no other windows open.
-          if (BrowserWindow.getAllWindows().length === 0) {
-            console.log('🔄 Recreating window on activate...');
-            await this.createWindow();
-          }
-        });
-      } catch (error) {
-        console.error('🚨 CRITICAL ERROR during app initialization:', error);
-        console.error('🚨 Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
-        
-        // Try to show an error dialog if possible
-        try {
-          const { dialog } = require('electron');
-          dialog.showErrorBox('ENGIE Initialization Error', 
-            `Failed to initialize ENGIE: ${error instanceof Error ? error.message : String(error)}\n\nPlease check the console for more details.`);
-        } catch (dialogError) {
-          console.error('Could not show error dialog:', dialogError);
-        }
-        
-        // Exit gracefully
-        app.quit();
-      }
-    }).catch(error => {
-      console.error('🚨 CRITICAL ERROR: App whenReady failed:', error);
-      app.quit();
+    // Create the main window
+    app.whenReady().then(() => {
+      this.createWindow();
+      this.setupIpcHandlers();
+      this.initializeBackgroundServices();
+      this.initializeLocalLLM();
     });
 
-    // Quit when all windows are closed, except on macOS
+    // Handle app quit events
     app.on('window-all-closed', () => {
+      // Cleanup all services before quitting
+      this.cleanupAllServices();
+      
       if (process.platform !== 'darwin') {
-        this.cleanupBackgroundServices();
         app.quit();
+      }
+    });
+
+    app.on('before-quit', () => {
+      console.log('🔄 App shutting down, cleaning up services...');
+      this.cleanupAllServices();
+    });
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        this.createWindow();
+      }
+    });
+
+    // Handle uncaught exceptions to prevent crashes
+    process.on('uncaughtException', (error) => {
+      console.error('🚨 Uncaught Exception:', error);
+      this.cleanupAllServices();
+      // Don't exit immediately, try to continue
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason);
+      // Don't exit on unhandled rejections, just log them
+    });
+
+    // Additional crash protection
+    app.on('child-process-gone', (event, details) => {
+      console.error('🚨 Child process gone:', details);
+    });
+
+    app.on('render-process-gone', (event, webContents, details) => {
+      console.error('🚨 Render process gone:', details);
+      // Try to reload the window
+      if (!webContents.isDestroyed()) {
+        webContents.reload();
       }
     });
 
@@ -110,32 +100,6 @@ class EngieApp {
         shell.openExternal(url);
         return { action: 'deny' };
       });
-    });
-
-    app.on('before-quit', () => {
-      this.stopBackgroundServices();
-    });
-
-    // Handle app lifecycle for background processing
-    app.on('will-quit', (event) => {
-      if (this.workflowEngine.isWorkflowActive() || backgroundProcessor.getQueueStats().processing > 0) {
-        event.preventDefault();
-        
-        setTimeout(() => {
-          this.cleanupBackgroundServices();
-          app.quit();
-        }, 2000); // Wait 2 seconds for cleanup
-      }
-    });
-
-    // Unhandled error handling
-    process.on('uncaughtException', (error) => {
-      console.error('Uncaught Exception:', error);
-      this.cleanupBackgroundServices();
-    });
-
-    process.on('unhandledRejection', (reason, promise) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
     });
   }
 
@@ -789,13 +753,11 @@ class EngieApp {
     this.setupIntelligenceHandlers();
   }
 
-  private intelligenceSystem: any = null;
-
   private async getIntelligenceSystem() {
     if (!this.intelligenceSystem) {
       try {
         console.log('🧠 Initializing intelligence system...');
-        const { createIntelligenceSystem } = await import('./engie-intelligence-system.js');
+        const { createIntelligenceSystem } = await import('./engie-intelligence-system');
         
         // Add timeout to prevent hanging
         const initPromise = createIntelligenceSystem();
@@ -897,7 +859,7 @@ class EngieApp {
 
     ipcMain.handle('intelligence:install-taskmaster', async () => {
       try {
-        const { installEngieTaskMaster } = await import('./engie-taskmaster-installer.js');
+        const { installEngieTaskMaster } = await import('./engie-taskmaster-installer');
         const result = await installEngieTaskMaster();
         return { success: true, data: result };
       } catch (error) {
@@ -1095,6 +1057,25 @@ class EngieApp {
   private cleanupBackgroundServices(): void {
     backgroundProcessor.cleanup();
     localLLMService.cleanup();
+  }
+
+  private cleanupAllServices(): void {
+    try {
+      console.log('🧹 Cleaning up all services...');
+      
+      // Stop and cleanup background services
+      this.stopBackgroundServices();
+      this.cleanupBackgroundServices();
+      
+      // Clean up intelligence system if it exists
+      if (this.intelligenceSystem && typeof this.intelligenceSystem.cleanup === 'function') {
+        this.intelligenceSystem.cleanup();
+      }
+      
+      console.log('✅ All services cleaned up successfully');
+    } catch (error) {
+      console.error('❌ Error during service cleanup:', error);
+    }
   }
 
   private async initializeLocalLLM(): Promise<void> {

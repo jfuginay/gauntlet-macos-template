@@ -49,11 +49,12 @@ export interface SecondBrainData {
   };
 }
 
-class EngieMCPServer {
+export class EngieMCPServer {
   private server: Server;
   private mcpProcess: ChildProcess | null = null;
   private dataPath: string;
   private data: SecondBrainData;
+  private autoSaveInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.server = new Server(
@@ -382,8 +383,14 @@ class EngieMCPServer {
   }
 
   private setupEventHandlers() {
+    // Clear any existing interval before setting a new one
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+      this.autoSaveInterval = null;
+    }
+
     // Auto-save data periodically
-    setInterval(() => {
+    this.autoSaveInterval = setInterval(() => {
       if (this.data.settings.autoSave) {
         this.saveData().catch(console.error);
       }
@@ -391,7 +398,7 @@ class EngieMCPServer {
 
     // Save on app quit
     app.on('before-quit', () => {
-      this.saveData().catch(console.error);
+      this.cleanup();
     });
   }
 
@@ -922,12 +929,25 @@ class EngieMCPServer {
 
   async stop(): Promise<void> {
     console.log('Stopping Engie MCP Server...');
-    await this.saveData();
+    this.cleanup();
+    
     if (this.mcpProcess) {
       this.mcpProcess.kill();
       this.mcpProcess = null;
     }
-    console.log('Engie MCP Server stopped');
+    
+    await this.server.close();
+  }
+
+  private cleanup(): void {
+    // Clear the auto-save interval
+    if (this.autoSaveInterval) {
+      clearInterval(this.autoSaveInterval);
+      this.autoSaveInterval = null;
+    }
+
+    // Save data one final time
+    this.saveData().catch(console.error);
   }
 }
 

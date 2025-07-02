@@ -5,26 +5,6 @@ import { logCollector } from './log-collector';
 
 const execAsync = promisify(exec);
 
-// Helper function for fetch with timeout using AbortController
-async function fetchWithTimeout(url: string, options: RequestInit & { timeout?: number }): Promise<Response> {
-  const { timeout = 30000, ...fetchOptions } = options;
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
-  try {
-    const response = await fetch(url, {
-      ...fetchOptions,
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    throw error;
-  }
-}
-
 export interface LocalLLMStatus {
   installed: boolean;
   running: boolean;
@@ -59,6 +39,7 @@ export class LocalLLMService {
   private ollamaApiUrl = 'http://127.0.0.1:11434';
   private currentModel: string | null = null;
   private modelPreloaded = false;
+  private activeControllers: Set<AbortController> = new Set();
 
   // Performance-optimized model recommendations
   private readonly FAST_MODELS = [
@@ -226,6 +207,8 @@ export class LocalLLMService {
   // HTTP API query for much faster responses
   async query(prompt: string): Promise<LocalLLMResponse> {
     const startTime = Date.now();
+    const controller = new AbortController();
+    this.activeControllers.add(controller);
     
     try {
       // Ensure we have a model available
@@ -247,23 +230,23 @@ export class LocalLLMService {
 
       logCollector.logLLM('debug', `🤖 Querying ${this.currentModel} via HTTP API: ${prompt.substring(0, 50)}...`);
 
-             // Use HTTP API for much faster responses
-       const response = await fetchWithTimeout(`${this.ollamaApiUrl}/api/generate`, {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           model: this.currentModel,
-           prompt,
-           stream: false, // Get full response at once
-           options: {
-             temperature: 0.7,
-             top_p: 0.9,
-             max_tokens: 500,
-             stop: ['Human:', 'Assistant:', '\n\n']
-           }
-         }),
-         timeout: 30000 // 30 second timeout
-       });
+      // Use HTTP API for much faster responses
+      const response = await fetch(`${this.ollamaApiUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.currentModel,
+          prompt,
+          stream: false, // Get full response at once
+          options: {
+            temperature: 0.7,
+            top_p: 0.9,
+            max_tokens: 500,
+            stop: ['Human:', 'Assistant:', '\n\n']
+          }
+        }),
+        signal: controller.signal
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -292,6 +275,9 @@ export class LocalLLMService {
         error: error instanceof Error ? error.message : 'Query failed',
         responseTime: Date.now() - startTime
       };
+    } finally {
+      // Clean up controller
+      this.activeControllers.delete(controller);
     }
   }
 
@@ -343,21 +329,24 @@ export class LocalLLMService {
   // Preload model for instant responses
   private async preloadCurrentModel(): Promise<boolean> {
     if (!this.currentModel) return false;
+    
+    const controller = new AbortController();
+    this.activeControllers.add(controller);
 
     try {
       logCollector.logLLM('info', `🔥 Preloading model ${this.currentModel} for instant responses...`);
       
-             // Send a small query to load the model into memory
-       await fetchWithTimeout(`${this.ollamaApiUrl}/api/generate`, {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           model: this.currentModel,
-           prompt: 'Hi',
-           stream: false
-         }),
-         timeout: 10000
-       });
+      // Send a small query to load the model into memory
+      await fetch(`${this.ollamaApiUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.currentModel,
+          prompt: 'Hi',
+          stream: false
+        }),
+        signal: controller.signal
+      });
 
       this.modelPreloaded = true;
       logCollector.logLLM('success', '✅ Model preloaded successfully');
@@ -365,6 +354,9 @@ export class LocalLLMService {
     } catch (error) {
       logCollector.logLLM('warn', 'Model preload failed', error);
       return false;
+    } finally {
+      // Clean up controller
+      this.activeControllers.delete(controller);
     }
   }
 
@@ -437,15 +429,30 @@ export class LocalLLMService {
 
   private async waitForOllamaReady(maxWait = 30000): Promise<void> {
     const startTime = Date.now();
-         while (Date.now() - startTime < maxWait) {
-       try {
-         const response = await fetchWithTimeout(`${this.ollamaApiUrl}/api/tags`, { timeout: 5000 });
-         if (response.ok) return;
-       } catch {
-         // Continue waiting
-       }
-       await new Promise(resolve => setTimeout(resolve, 1000));
-     }
+    
+    while (Date.now() - startTime < maxWait) {
+      const controller = new AbortController();
+      this.activeControllers.add(controller);
+      
+      try {
+        const response = await fetch(`${this.ollamaApiUrl}/api/tags`, { 
+          signal: controller.signal,
+          // Add a shorter timeout for individual requests
+        });
+        
+        if (response.ok) {
+          this.activeControllers.delete(controller);
+          return;
+        }
+      } catch {
+        // Continue waiting
+      } finally {
+        this.activeControllers.delete(controller);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
     throw new Error('Ollama failed to start within timeout');
   }
 
@@ -563,8 +570,20 @@ export class LocalLLMService {
 
   // Cleanup
   cleanup(): void {
-    this.modelPreloaded = false;
+    // Abort all active fetch requests
+    for (const controller of this.activeControllers) {
+      controller.abort();
+    }
+    this.activeControllers.clear();
+    
+    // Reset state
+    this.isInitialized = false;
+    this.isInitializing = false;
     this.currentModel = null;
+    this.modelPreloaded = false;
+    this.progressCallback = undefined;
+    
+    logCollector.logLLM('info', 'Local LLM Service cleaned up');
   }
 }
 

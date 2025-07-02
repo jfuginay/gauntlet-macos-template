@@ -23,6 +23,7 @@ export class BackgroundProcessor {
   private isRunning: boolean = false;
   private maxConcurrent: number = 3;
   private callbacks: Map<string, (result: any) => void> = new Map();
+  private processTimer: NodeJS.Timeout | null = null;
 
   constructor() {
     this.workflowEngine = new WorkflowEngine();
@@ -33,13 +34,20 @@ export class BackgroundProcessor {
     if (this.isRunning) return;
     
     this.isRunning = true;
-    this.processQueue();
+    this.scheduleProcessing();
     console.log('Background processor started');
   }
 
   // Stop the background processor
   stop(): void {
     this.isRunning = false;
+    
+    // Clear the processing timer
+    if (this.processTimer) {
+      clearTimeout(this.processTimer);
+      this.processTimer = null;
+    }
+    
     console.log('Background processor stopped');
   }
 
@@ -151,6 +159,26 @@ export class BackgroundProcessor {
     this.queue.splice(insertIndex, 0, job);
   }
 
+  private scheduleProcessing(): void {
+    if (!this.isRunning) return;
+
+    // Clear any existing timer
+    if (this.processTimer) {
+      clearTimeout(this.processTimer);
+      this.processTimer = null;
+    }
+
+    // Schedule next processing cycle
+    this.processTimer = setTimeout(() => {
+      this.processQueue().then(() => {
+        this.scheduleProcessing(); // Schedule next cycle
+      }).catch(error => {
+        console.error('Error in processQueue:', error);
+        this.scheduleProcessing(); // Continue despite error
+      });
+    }, 100);
+  }
+
   private async processQueue(): Promise<void> {
     while (this.isRunning && this.queue.length > 0 && this.processing.size < this.maxConcurrent) {
       const job = this.queue.shift();
@@ -168,11 +196,6 @@ export class BackgroundProcessor {
         job.error = error.message;
         this.completeJob(job);
       });
-    }
-
-    // Schedule next check
-    if (this.isRunning && (this.queue.length > 0 || this.processing.size > 0)) {
-      setTimeout(() => this.processQueue(), 100);
     }
   }
 
@@ -232,11 +255,6 @@ export class BackgroundProcessor {
 
     // Emit completion event (could be used by renderer)
     this.emitJobComplete(job);
-
-    // Continue processing queue
-    if (this.isRunning) {
-      this.processQueue();
-    }
   }
 
   private emitJobComplete(job: BackgroundJob): void {
@@ -253,8 +271,6 @@ export class BackgroundProcessor {
     const delay = Math.random() * (max - min) + min;
     return new Promise(resolve => setTimeout(resolve, delay));
   }
-
-
 
   // Cleanup method
   cleanup(): void {
