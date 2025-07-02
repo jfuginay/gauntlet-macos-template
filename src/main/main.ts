@@ -45,7 +45,8 @@ class EngieApp {
       this.createWindow();
       this.setupIpcHandlers();
       this.initializeBackgroundServices();
-      this.initializeLocalLLM();
+      // Initialize Local LLM asynchronously to prevent blocking startup
+      this.initializeLocalLLMAsync();
     });
 
     // Handle app quit events
@@ -713,7 +714,10 @@ class EngieApp {
     ipcMain.handle('local-llm:query', async (event, prompt: string) => {
       try {
         const response = await localLLMService.query(prompt);
-        return { success: true, data: response };
+        // The localLLMService.query() already returns a structured response
+        // with { success, data?, error?, responseTime? }
+        // So we return it directly instead of double-wrapping it
+        return response;
       } catch (error) {
         logCollector.logLLM('error', 'Local LLM query error', error);
         return { 
@@ -995,8 +999,13 @@ class EngieApp {
               resolve({ success: true, data });
             } catch {
               // TaskMaster CLI returns formatted text, not JSON
-              // For list commands, return the raw output for display
-              if (command === 'list' || command === 'show' || command === 'next') {
+              // For list commands, parse the task data from the output
+              if (command === 'list') {
+                // Parse tasks from the formatted output
+                const tasks = this.parseTasksFromOutput(stdout);
+                const stats = this.parseStatsFromOutput(stdout);
+                resolve({ success: true, data: { tasks, stats } });
+              } else if (command === 'show' || command === 'next') {
                 resolve({ success: true, data: stdout.trim(), isFormattedText: true });
               } else {
                 // For other commands, try to extract meaningful data or return raw output
@@ -1024,17 +1033,135 @@ class EngieApp {
           }
         });
 
-        // Timeout after 30 seconds for AI operations
-        setTimeout(() => {
-          child.kill();
-          resolve({ success: false, error: 'Command timeout after 30 seconds' });
-        }, 30000);
+        // Timeout after 60 seconds for AI operations (increased for large outputs)
+        const timeout = setTimeout(() => {
+          child.kill('SIGTERM');
+          resolve({ success: false, error: 'Command timeout after 60 seconds' });
+        }, 60000);
+        
+        // Clear timeout on successful completion
+        child.on('exit', () => {
+          clearTimeout(timeout);
+        });
       });
 
     } catch (error) {
       console.error('TaskMaster CLI execution error:', error);
       return { success: false, error: String(error) };
     }
+  }
+
+  private parseTasksFromOutput(output: string): any[] {
+    const tasks: any[] = [];
+    const lines = output.split('\n');
+    
+    // Look for the task table header
+    let inTaskTable = false;
+    for (const line of lines) {
+      // Look for the header row with ID, Title, Status, etc.
+      if (line.includes('│ ID') && line.includes('│ Title') && line.includes('│ Status')) {
+        inTaskTable = true;
+        continue;
+      }
+      
+      // Skip separator lines
+      if (line.includes('├───') || line.includes('┼───')) {
+        continue;
+      }
+      
+      // Parse task data rows
+      if (inTaskTable && line.startsWith('│') && !line.includes('───')) {
+        const parts = line.split('│').map(p => p.trim()).filter(p => p);
+        
+        // Task data row should have: ID, Title, Status, Priority, Dependencies, Complexity
+        if (parts.length >= 4 && parts[0] && !parts[0].includes('ID') && parts[0].match(/^\d+$/)) {
+          const task = {
+            id: parts[0],
+            title: parts[1].replace('...', ''), // Remove truncation marks
+            status: this.parseStatus(parts[2]),
+            priority: parts[3],
+            dependencies: this.parseDependencies(parts[4] || 'None'),
+            subtasks: [],
+            description: this.getTaskDescription(parts[0])
+          };
+          
+          tasks.push(task);
+        }
+      }
+      
+      // End of table
+      if (inTaskTable && line.startsWith('└')) {
+        break;
+      }
+    }
+    
+    return tasks;
+  }
+
+  private parseStatus(statusText: string): string {
+    if (statusText.includes('done') || statusText.includes('✓')) return 'done';
+    if (statusText.includes('in-prog') || statusText.includes('►')) return 'in-progress';
+    if (statusText.includes('pending') || statusText.includes('○')) return 'pending';
+    if (statusText.includes('blocked')) return 'blocked';
+    if (statusText.includes('cancelled')) return 'cancelled';
+    if (statusText.includes('deferred')) return 'deferred';
+    return 'pending';
+  }
+
+  private parseDependencies(depText: string): string[] {
+    if (depText === 'None' || !depText) return [];
+    
+    // Extract numbers from dependency text like "1 (Not found), 2 (Not found)"
+    const matches = depText.match(/\d+/g);
+    return matches || [];
+  }
+
+  private getTaskDescription(taskId: string): string {
+    // For now, return a placeholder - in a real implementation, 
+    // we might cache the full task data or make another call
+    return `Task ${taskId} description`;
+  }
+
+  private parseStatsFromOutput(output: string): any {
+    const stats = {
+      total: 0,
+      completed: 0,
+      inProgress: 0,
+      pending: 0,
+      blocked: 0,
+      deferred: 0,
+      cancelled: 0,
+      review: 0,
+      completionPercentage: 0
+    };
+    
+    const lines = output.split('\n');
+    for (const line of lines) {
+      if (line.includes('Done:')) {
+        const match = line.match(/Done:\s*(\d+)/);
+        if (match) stats.completed = parseInt(match[1]);
+      }
+      if (line.includes('In Progress:')) {
+        const match = line.match(/In Progress:\s*(\d+)/);
+        if (match) stats.inProgress = parseInt(match[1]);
+      }
+      if (line.includes('Pending:')) {
+        const match = line.match(/Pending:\s*(\d+)/);
+        if (match) stats.pending = parseInt(match[1]);
+      }
+      if (line.includes('Blocked:')) {
+        const match = line.match(/Blocked:\s*(\d+)/);
+        if (match) stats.blocked = parseInt(match[1]);
+      }
+      if (line.includes('Tasks Progress:')) {
+        const match = line.match(/(\d+)%/);
+        if (match) stats.completionPercentage = parseInt(match[1]);
+      }
+    }
+    
+    stats.total = stats.completed + stats.inProgress + stats.pending + stats.blocked + stats.deferred + stats.cancelled;
+    
+    return stats;
   }
 
   private async initializeBackgroundServices(): Promise<void> {
@@ -1078,9 +1205,22 @@ class EngieApp {
     }
   }
 
+  private async initializeLocalLLMAsync(): Promise<void> {
+    // Run initialization in background without blocking startup
+    setTimeout(async () => {
+      await this.initializeLocalLLM();
+    }, 1000); // Small delay to ensure window is ready
+  }
+
   private async initializeLocalLLM(): Promise<void> {
     try {
       console.log('🚀 Initializing Local AI with optimized auto-setup for instant responses...');
+      
+      // Skip AI initialization in development if environment variable is set
+      if (process.env.SKIP_AI_INIT === 'true') {
+        console.log('⏭️ Skipping AI initialization (SKIP_AI_INIT=true)');
+        return;
+      }
       
       // Set up progress callback to send updates to renderer
       localLLMService.setProgressCallback((progress, status) => {
